@@ -9,7 +9,7 @@
 #define FIRST_BIN_SZ (2 * 1024)
 
 typedef struct state_t{
-  Atoms* atoms;
+  PrivData* priv;
   ERL_NIF_TERM no_match;
   ERL_NIF_TERM ret;
   ErlNifBinary bin;
@@ -54,13 +54,13 @@ match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
     return 0;
   }
   
-  if(enif_is_identical(term, st->atoms->am_true)){
+  if(enif_is_identical(term, st->priv->am_true)){
     e_puts(4, "true", st);
     return 1;
-  }else if(enif_is_identical(term, st->atoms->am_false)){
+  }else if(enif_is_identical(term, st->priv->am_false)){
     e_puts(5, "false", st);
     return 1;
-  }else if(enif_is_identical(term, st->atoms->am_null)){
+  }else if(enif_is_identical(term, st->priv->am_null)){
     e_puts(4, "null", st);
     return 1;
   }
@@ -269,10 +269,10 @@ match_tuple(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
     //eep18
     return (match_proplist(env, tuple[0], st));
   }else if(arity == 2){
-    if(enif_is_identical(tuple[0], st->atoms->am_struct)){
+    if(enif_is_identical(tuple[0], st->priv->am_struct)){
       //struct
       return match_proplist(env, tuple[1], st);
-    }else   if(enif_is_identical(tuple[0], st->atoms->am_json)){
+    }else   if(enif_is_identical(tuple[0], st->priv->am_json)){
       //json
       return  match_json(env, tuple[1], st);
     }
@@ -310,7 +310,7 @@ match_term(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
 ERL_NIF_TERM
 encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   State st = {
-    .atoms = (Atoms*)enif_priv_data(env),
+    .priv = (PrivData*)enif_priv_data(env),
     .no_match =  0,
     .ret =  0,
     .bin = {0, NULL},
@@ -323,6 +323,6 @@ encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     enif_realloc_binary(&st.bin, st.cur - st.bin.data);
     return enif_make_binary(env, &st.bin);
   }else{
-    return enif_make_tuple2(env, st.atoms->am_no_match, st.no_match);
+    return enif_make_tuple2(env, st.priv->am_no_match, st.no_match);
   }
 }

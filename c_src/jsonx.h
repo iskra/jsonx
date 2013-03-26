@@ -18,7 +18,9 @@ typedef struct{
   ERL_NIF_TERM am_proplist;
   ERL_NIF_TERM am_eep18;
   ERL_NIF_TERM am_no_match;
-}Atoms;
+
+  ErlNifResourceType* records_RSTYPE;
+}PrivData;
 
 
 ERL_NIF_TERM

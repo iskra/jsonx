@@ -12,37 +12,35 @@ rt_dtor(ErlNifEnv* env, void* obj){
   entry = NULL;
 }
 
-static ErlNifResourceType* records_RSTYPE = NULL;
-
 static int
 load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info){
 
-  Atoms *atoms = enif_alloc(sizeof(Atoms));
-  if(atoms == NULL) return 1;
+  PrivData *pdata = enif_alloc(sizeof(PrivData));
+  if(pdata == NULL) return 1;
 
-  records_RSTYPE = enif_open_resource_type(env, NULL,
+  pdata->records_RSTYPE = enif_open_resource_type(env, NULL,
 					   "records_RSTYPE",
 					   rt_dtor,
 					   ERL_NIF_RT_CREATE, NULL);
-  if (records_RSTYPE == NULL) return -1;
+  if (pdata->records_RSTYPE == NULL) return -1;
 
-  if(!enif_make_existing_atom(env, "true",     &(atoms->am_true),     ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "false",    &(atoms->am_false),    ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "null",     &(atoms->am_null),     ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "true",     &(pdata->am_true),     ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "false",    &(pdata->am_false),    ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "null",     &(pdata->am_null),     ERL_NIF_LATIN1)) return 1;
 
-  if(!enif_make_existing_atom(env, "error",          &(atoms->am_error),   ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "big_num",   &(atoms->am_erange),  ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "invalid_string", &(atoms->am_estr),    ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "invalid_json",   &(atoms->am_esyntax), ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "trailing_data",  &(atoms->am_etrailing),ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "error",          &(pdata->am_error),   ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "big_num",   &(pdata->am_erange),  ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "invalid_string", &(pdata->am_estr),    ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "invalid_json",   &(pdata->am_esyntax), ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "trailing_data",  &(pdata->am_etrailing),ERL_NIF_LATIN1)) return 1;
 
-  if(!enif_make_existing_atom(env, "json",     &(atoms->am_json),     ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "struct",   &(atoms->am_struct),   ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "proplist", &(atoms->am_proplist), ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "eep18",    &(atoms->am_eep18),    ERL_NIF_LATIN1)) return 1;
-  if(!enif_make_existing_atom(env, "no_match", &(atoms->am_no_match), ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "json",     &(pdata->am_json),     ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "struct",   &(pdata->am_struct),   ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "proplist", &(pdata->am_proplist), ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "eep18",    &(pdata->am_eep18),    ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "no_match", &(pdata->am_no_match), ERL_NIF_LATIN1)) return 1;
 
-  *priv_data = (void*)atoms;
+  *priv_data = (void*)pdata;
 
   return 0;
 }

@@ -1,13 +1,30 @@
 // Copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
 
-#include "erl_nif.h"
 #include "jsonx.h"
+#include "jsonx_resource.h"
+
+static void
+rt_dtor(ErlNifEnv* env, void* obj){
+  //assert(obj);
+  Entry *entry = (Entry*)obj;
+  enif_release_binary(&entry->bin);
+  entry->bin.data = NULL;
+  entry = NULL;
+}
+
+static ErlNifResourceType* records_RSTYPE = NULL;
 
 static int
 load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info){
 
   Atoms *atoms = enif_alloc(sizeof(Atoms));
   if(atoms == NULL) return 1;
+
+  records_RSTYPE = enif_open_resource_type(env, NULL,
+					   "records_RSTYPE",
+					   rt_dtor,
+					   ERL_NIF_RT_CREATE, NULL);
+  if (records_RSTYPE == NULL) return -1;
 
   if(!enif_make_existing_atom(env, "true",     &(atoms->am_true),     ERL_NIF_LATIN1)) return 1;
   if(!enif_make_existing_atom(env, "false",    &(atoms->am_false),    ERL_NIF_LATIN1)) return 1;

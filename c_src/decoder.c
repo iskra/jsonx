@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <assert.h>
-#include "erl_nif.h"
 #include "jsonx.h"
 #include "jsonx_str.h"
 

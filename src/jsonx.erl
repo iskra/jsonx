@@ -1,6 +1,5 @@
 %% @copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
 
-
 %% @doc JSONX is an Erlang library for efficient decode and encode JSON, written in C.
 %%      Works with binaries as strings, arrays as lists and it only knows how to decode UTF-8 (and ASCII).
 %%
@@ -27,12 +26,10 @@
 %%       <li>PropList           -> object</li>
 %%       <li>{json, IOList}     -> include IOList with no validation</li>
 %%      </ul>
+
 -module(jsonx).
-
--export([decode/1, decode/2, encode/1]).
-
+-export([decode/1, decode/2, encode/1, encoder/1]).
 -on_load(init/0).
-
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
 
@@ -42,6 +39,54 @@
       JSON_TERM :: any().
 encode(_) ->
     not_loaded(?LINE).
+
+
+%%@doc Encode JSON.
+-spec encoder(RECORDS_DESC) -> ENCODER when
+      RECORDS_DESC :: [{tag, [names]}],
+      ENCODER      :: function().
+%% %% Records descriptions for NIF
+%% {
+%%   Rcnt                                 %% Records count
+%%  ,Fcnt                                 %% Counter all fields in records
+%%  ,Records = [{Tag, Fields_off, Arity}] %% List of records tag, position and length fields
+%%  ,Fields  = [{Name_off, Size}]         %% List of position and size fields names in binary storage
+%%  ,Binsz                                  %% Binary data size
+%%  ,Bin                                  %% Binary storage for names of fields, format - <,"name": >
+%% }
+encoder(R) ->
+    {Rcnt, Fcnt, Binsz, Rs, Fs, Bin} = inspect_records(R),
+    io:format("~p~n~n", [ {Rcnt, Fcnt, Rs, Fs, Binsz, Bin} ]),
+    Resource = make_records_resource(Rcnt, Fcnt, Rs, Fs, Binsz, Bin),
+    %%io:format("~p~n~n", [ {Rcnt, Fcnt, Rs, Fs, Binsz, Bin} ]),
+    fun(JSON_TERM) -> encode_with_records_resource(JSON_TERM, Resource) end.
+
+make_records_resource(_Rcnt, _Fcnt, _Rs, _Fs, _Binsz, _Bin) ->
+    %%resource.
+    not_loaded(?LINE).
+encode_with_records_resource(_JSON_TERM, _Resource) ->
+    %%{JSON_TERM, Resource}.
+    not_loaded(?LINE).
+inspect_records(T) ->
+    {Rcnt, Fcnt, Rs, {Fs, Blen, Bins}} = records(T),
+    {Rcnt, Fcnt, Blen, lists:reverse(Rs), lists:reverse(Fs),
+     iolist_to_binary(lists:reverse(Bins))}.
+records(Rs) ->
+    records_(Rs, {_Rcnt = 0, _OffF = 0, _Rs = [],
+	    {_Fields = [], _OffB = 0, _Bins = []}}).
+records_([], R) ->
+    R;
+records_([{Tag, Fs} | RTail], {Rcnt, OffF, Rs, FsR}) when is_atom(Tag) ->
+    Fcnt = length(Fs),
+    records_(RTail, {Rcnt+1, OffF + Fcnt, [{Tag,  OffF, Fcnt} | Rs] , fields(Fs, FsR)}).
+fields([], R) ->
+    R;
+fields( [Name|NTail], {Fields, OffB, Bins}  ) when is_atom(Name) ->
+    Bin = iolist_to_binary([",\"", atom_to_binary(Name, latin1),<<"\": ">>]),
+    LenB = size(Bin),
+    fields(NTail, {[{OffB, LenB} | Fields], OffB + LenB, [Bin|Bins]}).
+
+
 
 
 %%@doc Decode JSON to Erlang term.

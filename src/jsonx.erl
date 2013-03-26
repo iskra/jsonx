@@ -64,9 +64,9 @@ encoder(R) ->
 make_records_resource(_Rcnt, _Fcnt, _Rs, _Fs, _Binsz, _Bin) ->
     %%resource.
     not_loaded(?LINE).
-encode_with_records_resource(_JSON_TERM, _Resource) ->
-    %%{JSON_TERM, Resource}.
-    not_loaded(?LINE).
+encode_with_records_resource(JSON_TERM, Resource) ->
+    {JSON_TERM, Resource}.
+    %% not_loaded(?LINE).
 inspect_records(T) ->
     {Rcnt, Fcnt, Rs, {Fs, Blen, Bins}} = records(T),
     {Rcnt, Fcnt, Blen, lists:reverse(Rs), lists:reverse(Fs),
@@ -85,9 +85,6 @@ fields( [Name|NTail], {Fields, OffB, Bins}  ) when is_atom(Name) ->
     Bin = iolist_to_binary([",\"", atom_to_binary(Name, latin1),<<"\": ">>]),
     LenB = size(Bin),
     fields(NTail, {[{OffB, LenB} | Fields], OffB + LenB, [Bin|Bins]}).
-
-
-
 
 %%@doc Decode JSON to Erlang term.
 -spec decode(JSON) -> JSON_TERM when

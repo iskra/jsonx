@@ -141,6 +141,7 @@ nif_funcs[] = {
   {"decode",  1, decode_nif},
   {"decode2", 2, decode_nif},
   {"encode",  1, encode_nif},
+  {"encode",  2, encode_nif},
   {"make_records_resource", 6, make_records_resource_nif}
 };
 

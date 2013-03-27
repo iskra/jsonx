@@ -59,14 +59,13 @@ encoder(R) ->
     io:format("~p~n~n", [ {Rcnt, Fcnt, Rs, Fs, Binsz, Bin} ]),
     Resource = make_records_resource(Rcnt, Fcnt, Rs, Fs, Binsz, Bin),
     %%io:format("~p~n~n", [ {Rcnt, Fcnt, Rs, Fs, Binsz, Bin} ]),
-    fun(JSON_TERM) -> encode_with_records_resource(JSON_TERM, Resource) end.
+    fun(JSON_TERM) -> encode(JSON_TERM, Resource) end.
 
 make_records_resource(_Rcnt, _Fcnt, _Rs, _Fs, _Binsz, _Bin) ->
     %%resource.
     not_loaded(?LINE).
-encode_with_records_resource(JSON_TERM, Resource) ->
-    {JSON_TERM, Resource}.
-    %% not_loaded(?LINE).
+encode(_JSON_TERM, _Resource) ->
+    not_loaded(?LINE).
 inspect_records(T) ->
     {Rcnt, Fcnt, Rs, {Fs, Blen, Bins}} = records(T),
     {Rcnt, Fcnt, Blen, lists:reverse(Rs), lists:reverse(Fs),
@@ -78,7 +77,13 @@ records_([], R) ->
     R;
 records_([{Tag, Fs} | RTail], {Rcnt, OffF, Rs, FsR}) when is_atom(Tag) ->
     Fcnt = length(Fs),
-    records_(RTail, {Rcnt+1, OffF + Fcnt, [{Tag,  OffF, Fcnt} | Rs] , fields(Fs, FsR)}).
+    records_(RTail, {Rcnt+1, OffF + Fcnt, [{Tag,  OffF, Fcnt} | Rs] , fields1(Fs, FsR)}).
+fields1([], R) ->
+    R;
+fields1( [Name|NTail], {Fields, OffB, Bins}  ) when is_atom(Name) ->
+    Bin = iolist_to_binary(["\"", atom_to_binary(Name, latin1),<<"\": ">>]),
+    LenB = size(Bin),
+    fields(NTail, {[{OffB, LenB} | Fields], OffB + LenB, [Bin|Bins]}).
 fields([], R) ->
     R;
 fields( [Name|NTail], {Fields, OffB, Bins}  ) when is_atom(Name) ->
@@ -161,7 +166,7 @@ encl1_test() ->  <<"[[[]]]">> = jsonx:encode([[[]]]).
 encl2_test() ->  <<"[true,1,1.1,\"bin\"]">> = jsonx:encode([true, 1, 1.1, <<"bin">>]).
 
 %% %% Test encode empty object
-%% enco0_test() ->  <<"{}">> = jsonx:encode({}).
+enco0_test() ->  {no_match, {}} = jsonx:encode({}).
 
 %% Test encode proplist
 encpl0_test() ->  <<"{\"a\":1}">> = jsonx:encode([{a,1}]). 

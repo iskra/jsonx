@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 #include "jsonx.h"
 #include "jsonx_str.h"
+#include "jsonx_resource.h"
 
 #define FIRST_BIN_SZ (2 * 1024)
 
@@ -14,6 +16,7 @@ typedef struct state_t{
   ERL_NIF_TERM ret;
   ErlNifBinary bin;
   unsigned char *cur;
+  Entry *records;
 }State;
 
 static inline int match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
@@ -260,69 +263,113 @@ match_json(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
 }
 
 static inline int
+match_record(ErlNifEnv* env, int arity, const ERL_NIF_TERM *tuple, State *st){
+
+  Record *records = records_offset(st->records);
+  Field *fields = fields_offset(st->records);
+  int i, k;
+  for(i = 0; i < st->records->records_cnt; i++){
+    if(records[i].tag == tuple[0] &&  records[i].arity == (arity -1)){
+      unsigned fds_offset = records[i].fds_offset;
+      unsigned bin_size = 0;
+      e_putc('{', st);
+      for(k = 0; k < records[i].arity; k++){
+	Field field = fields[fds_offset + k];
+	bin_size += field.size;
+	//FIXME {
+	e_puts(field.size, st->records->bin.data + field.offset, st);
+	if(!match_term(env, tuple[k+1], st))
+	  return 0;
+      }
+      e_putc('}', st);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static inline int
 match_tuple(ErlNifEnv* env, ERL_NIF_TERM term, State *st){ 
   const ERL_NIF_TERM *tuple;
   int arity;
   if(!enif_get_tuple(env, term, &arity, &tuple))
     return 0;
-  if(arity == 1){
-    //eep18
-    return (match_proplist(env, tuple[0], st));
-  }else if(arity == 2){
-    if(enif_is_identical(tuple[0], st->priv->am_struct)){
-      //struct
-      return match_proplist(env, tuple[1], st);
-    }else   if(enif_is_identical(tuple[0], st->priv->am_json)){
-      //json
-      return  match_json(env, tuple[1], st);
+  if(arity > 0){ 
+    if(enif_is_atom(env, tuple[0])){
+      if(arity == 2){
+	if(enif_is_identical(tuple[0], st->priv->am_struct)){
+	  //struct
+	  return match_proplist(env, tuple[1], st);
+	}else   if(enif_is_identical(tuple[0], st->priv->am_json)){
+	  //json
+	  return  match_json(env, tuple[1], st);
+	}
+      }
+      //records
+      if(st->records){
+	return match_record(env, arity, tuple, st);
+      }
+    }
+    if(arity == 1){
+      //eep18
+      return (match_proplist(env, tuple[0], st));
     }
   }
   return 0;  
 }
 
-static int
-match_term(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
-  if      (match_binary(env, term, st)){
-    return 1;
-  }else if(match_atom(env, term, st)){
-    return 1;
-  }else if(match_int(env, term, st)){
-    return 1;
-  }else if(match_empty_list(env, term, st)){
-    return 1;
-  }else if(match_list(env, term, st)){
-    return 1;
-  }else if(match_proplist(env, term, st)){
-    return 1;
-  }else if(match_tuple(env, term, st)){
-    return 1;
-  }else if(match_double(env, term, st)){
-    return 1;
-  }else if(match_int64(env, term, st)){
-    return 1;
+  static int
+    match_term(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
+    if      (match_binary(env, term, st)){
+      return 1;
+    }else if(match_atom(env, term, st)){
+      return 1;
+    }else if(match_int(env, term, st)){
+      return 1;
+    }else if(match_empty_list(env, term, st)){
+      return 1;
+    }else if(match_list(env, term, st)){
+      return 1;
+    }else if(match_proplist(env, term, st)){
+      return 1;
+    }else if(match_tuple(env, term, st)){
+      return 1;
+    }else if(match_double(env, term, st)){
+      return 1;
+    }else if(match_int64(env, term, st)){
+      return 1;
+    }
+    if(!st->no_match){
+      st->no_match = term;
+    }
+    return 0;
   }
-  if(!st->no_match){
-    st->no_match = term;
-  }
-  return 0;
-}
 
-ERL_NIF_TERM
-encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
-  State st = {
-    .priv = (PrivData*)enif_priv_data(env),
-    .no_match =  0,
-    .ret =  0,
-    .bin = {0, NULL},
-    .cur = NULL
-  };
-  assert(enif_alloc_binary(FIRST_BIN_SZ, &st.bin));
-  st.cur = st.bin.data;
+  ERL_NIF_TERM
+    encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
+    State st = {
+      .priv = (PrivData*)enif_priv_data(env),
+      .no_match =  0,
+      .ret =  0,
+      .bin = {0, NULL},
+      .cur = NULL,
+      .records = NULL
+    };
+    if(argc == 2){
+      Entry *entry_rs;
+      if(!enif_get_resource(env, argv[1], st.priv->records_RSTYPE, (void**)&entry_rs))
+	//FIXME
+	return  enif_make_badarg(env);
+      st.records = entry_rs;
+      //return enif_make_tuple2(env, argv[0], argv[1]);
+    }
+    assert(enif_alloc_binary(FIRST_BIN_SZ, &st.bin));
+    st.cur = st.bin.data;
 
-  if(match_term(env, argv[0], &st)){
-    enif_realloc_binary(&st.bin, st.cur - st.bin.data);
-    return enif_make_binary(env, &st.bin);
-  }else{
-    return enif_make_tuple2(env, st.priv->am_no_match, st.no_match);
+    if(match_term(env, argv[0], &st)){
+      enif_realloc_binary(&st.bin, st.cur - st.bin.data);
+      return enif_make_binary(env, &st.bin);
+    }else{
+      return enif_make_tuple2(env, st.priv->am_no_match, st.no_match);
+    }
   }
-}

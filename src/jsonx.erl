@@ -56,13 +56,10 @@ encode(_) ->
 %% }
 encoder(R) ->
     {Rcnt, Fcnt, Binsz, Rs, Fs, Bin} = inspect_records(R),
-    io:format("~p~n~n", [ {Rcnt, Fcnt, Rs, Fs, Binsz, Bin} ]),
     Resource = make_records_resource(Rcnt, Fcnt, Rs, Fs, Binsz, Bin),
-    %%io:format("~p~n~n", [ {Rcnt, Fcnt, Rs, Fs, Binsz, Bin} ]),
     fun(JSON_TERM) -> encode(JSON_TERM, Resource) end.
 
 make_records_resource(_Rcnt, _Fcnt, _Rs, _Fs, _Binsz, _Bin) ->
-    %%resource.
     not_loaded(?LINE).
 encode(_JSON_TERM, _Resource) ->
     not_loaded(?LINE).
@@ -132,9 +129,9 @@ init() ->
 not_loaded(Line) ->
     exit({not_loaded, [{module, ?MODULE}, {line, Line}]}).
 
-%%
+
 %% Tests
-%%
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -207,6 +204,19 @@ encutf4_test() ->
     {no_match,<<240, 128, 128>>} = jsonx:encode(<<240, 128, 128>>).
 encutf5_test() ->
      {no_match,<<248,128,128,128,128>>} = jsonx:encode(<<248, 128, 128, 128, 128>>).
+
+%% Test encode records
+encrec0_test() ->
+    F = jsonx:encoder([ {none, []}, {person, [name, age]}, {person2, [name, age, phone]} ]),
+    <<"[{},{\"name\": \"IvanDurak\",\"age\": 16},{\"name\": \"BabaYaga\",\"age\": 116,\"phone\": 6666666}]">>
+	=  F([ {none}, {person,<<"IvanDurak">>,16}, {person2, <<"BabaYaga">>, 116, 6666666} ]).
+-record(none, {}).
+-record(person, {name :: binary(), age :: number()}).
+-record(person2, {name, age, phone}).
+encrec1_test() ->
+    F = jsonx:encoder([ {none, record_info(fields, none)}, {person,  record_info(fields, person)}, {person2,  record_info(fields, person2)} ]),
+    <<"[{},{\"name\": \"IvanDurak\",\"age\": 16},{\"name\": \"BabaYaga\",\"age\": 116,\"phone\": 6666666}]">>
+	=  F([ {none}, {person,<<"IvanDurak">>,16}, {person2, <<"BabaYaga">>, 116, 6666666} ]).
 
 %% Test decode atoms
 dectrue_test() ->

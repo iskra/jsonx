@@ -1,13 +1,11 @@
 // Copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
 
 #include <string.h>
-#include <assert.h>
 #include "jsonx.h"
 #include "jsonx_resource.h"
 
 static void
 rt_dtor(ErlNifEnv* env, void* obj){
-  //assert(obj);
   Entry *entry = (Entry*)obj;
   enif_release_binary(&entry->bin);
   entry->bin.data = NULL;
@@ -81,8 +79,6 @@ make_records_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   PrivData* priv = (PrivData*)enif_priv_data(env);
   unsigned resource_sz = sizeof(Entry) + sizeof(Record)*rs_len + sizeof(Field)*fs_len;
   Entry *entry_rs = (Entry*)enif_alloc_resource(priv->records_RSTYPE, resource_sz); 
-  //fprintf(stderr, "Alloc Resource: %p\r\n", entry_rs);
-  assert(entry_rs);
   memset(entry_rs, 0, resource_sz);
   entry_rs->records_cnt = rs_len;
   entry_rs->fields_cnt = fs_len;
@@ -90,8 +86,7 @@ make_records_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     goto error;
   memset(entry_rs->bin.data, 0, bin_sz + 1);
   ErlNifBinary ebin;
-  assert(enif_inspect_binary(env, argv[5], &ebin));
-  assert(ebin.size == (entry_rs->bin.size - 1));
+  enif_inspect_binary(env, argv[5], &ebin);
   memcpy(entry_rs->bin.data, ebin.data , ebin.size);
 
   ERL_NIF_TERM list, head, tail;
@@ -101,13 +96,12 @@ make_records_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     const ERL_NIF_TERM *tuple;
     int arity;
     unsigned ip;
-    assert(enif_get_tuple(env, head, &arity, &tuple));
-    assert(arity == 3);
+    enif_get_tuple(env, head, &arity, &tuple);
     Record *records = records_offset(entry_rs);
     records[i].tag = tuple[0];
-    assert(enif_get_uint(env, tuple[1], &ip));
+    enif_get_uint(env, tuple[1], &ip);
     records[i].fds_offset = ip;
-    assert(enif_get_uint(env, tuple[2], &ip));
+    enif_get_uint(env, tuple[2], &ip);
     records[i].arity = ip;
     i++;
     list = tail;
@@ -118,12 +112,11 @@ make_records_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     const ERL_NIF_TERM *tuple;
     int arity;
     unsigned ip;
-    assert(enif_get_tuple(env, head, &arity, &tuple));
-    assert(arity == 2);
+    enif_get_tuple(env, head, &arity, &tuple);
     Field *fields = fields_offset(entry_rs);
-    assert(enif_get_uint(env, tuple[0], &ip));
+    enif_get_uint(env, tuple[0], &ip);
     fields[i].offset = ip;
-    assert(enif_get_uint(env, tuple[1], &ip));
+    enif_get_uint(env, tuple[1], &ip);
     fields[i].size = ip;
     i++;
     list = tail;

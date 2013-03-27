@@ -7,7 +7,6 @@
 #include "jsonx.h"
 #include "jsonx_str.h"
 
-#include <stdio.h>
 #define  JS_OFFSET (8 * sizeof(ERL_NIF_TERM))
 
 typedef struct{
@@ -32,7 +31,6 @@ static inline ERL_NIF_TERM parse_number(State* st);
 static inline ERL_NIF_TERM parse_true(State* st);
 static inline ERL_NIF_TERM parse_false(State* st);
 static inline ERL_NIF_TERM parse_null(State* st);
-
 
 static inline void
 grow_stack(State *st){
@@ -208,7 +206,6 @@ parse_number(State *st){
     return enif_make_int64(st->env, int_num);
   }
 }
-
 
 static inline ERL_NIF_TERM
 parse_true(State* st){

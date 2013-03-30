@@ -4,16 +4,14 @@
 #include <ctype.h>
 #include <errno.h>
 #include <assert.h>
-#include "erl_nif.h"
 #include "jsonx.h"
 #include "jsonx_str.h"
 
-#include <stdio.h>
 #define  JS_OFFSET (8 * sizeof(ERL_NIF_TERM))
 
 typedef struct{
   ErlNifEnv* env;
-  Atoms *atoms;
+  PrivData *priv;
   size_t buf_size;
   unsigned char *buf;
   unsigned char *cur;
@@ -33,7 +31,6 @@ static inline ERL_NIF_TERM parse_number(State* st);
 static inline ERL_NIF_TERM parse_true(State* st);
 static inline ERL_NIF_TERM parse_false(State* st);
 static inline ERL_NIF_TERM parse_null(State* st);
-
 
 static inline void
 grow_stack(State *st){
@@ -94,7 +91,7 @@ parse_array(State* st){
 	st->stack_top = down;
 	return term;
       }else{
-	st->error = st->atoms->am_esyntax;
+	st->error = st->priv->am_esyntax;
 	return 0;
       }
     }else{
@@ -140,16 +137,16 @@ parse_object(State* st){
       }
     }
     if(!st->error){
-      st->error = st->atoms->am_esyntax;
+      st->error = st->priv->am_esyntax;
     }
     return 0;
   }
  ret:
-  if(st->format == st->atoms->am_struct){
-    return enif_make_tuple2(st->env, st->atoms->am_struct, plist);
-  }else if(st->format == st->atoms->am_eep18){
+  if(st->format == st->priv->am_struct){
+    return enif_make_tuple2(st->env, st->priv->am_struct, plist);
+  }else if(st->format == st->priv->am_eep18){
     return enif_make_tuple1(st->env, plist);
-  }else if(st->format == st->atoms->am_proplist){
+  }else if(st->format == st->priv->am_proplist){
     return plist;
   }
   assert(0);
@@ -174,7 +171,7 @@ parse_string(State* st){
       }
     }
   }
-  st->error = st->atoms->am_estr;
+  st->error = st->priv->am_estr;
   return 0;
 }
 
@@ -189,7 +186,7 @@ parse_number(State *st){
   if((char*)st->cur == endptr){
     return 0;
   }else if(errno == ERANGE){
-    st->error = st->atoms->am_erange;
+    st->error = st->priv->am_erange;
     return 0;
   }
 
@@ -200,7 +197,7 @@ parse_number(State *st){
       return enif_make_double(st->env, float_num);
      }
     else{
-      st->error = st->atoms->am_erange;
+      st->error = st->priv->am_erange;
       return 0;
     }
   }
@@ -210,14 +207,13 @@ parse_number(State *st){
   }
 }
 
-
 static inline ERL_NIF_TERM
 parse_true(State* st){
   if(!(strncmp("rue", (char*)(++st->cur), 3))){
     st->cur = st->cur + 3;
-    return st->atoms->am_true;
+    return st->priv->am_true;
   }
-  st->error = st->atoms->am_esyntax;
+  st->error = st->priv->am_esyntax;
   return 0;
 }
 
@@ -225,9 +221,9 @@ static inline ERL_NIF_TERM
 parse_false(State* st){
   if(!(strncmp("alse", (char*)(++st->cur), 4))){
     st->cur = st->cur + 4;
-    return st->atoms->am_false;
+    return st->priv->am_false;
   }
-  st->error = st->atoms->am_esyntax;
+  st->error = st->priv->am_esyntax;
   return 0;
 }
 
@@ -235,9 +231,9 @@ static inline ERL_NIF_TERM
 parse_null(State* st){
   if(!(strncmp("ull", (char*)(++st->cur), 3))){
     st->cur = st->cur + 3;
-    return st->atoms->am_null;
+    return st->priv->am_null;
   }
-  st->error = st->atoms->am_esyntax;
+  st->error = st->priv->am_esyntax;
   return 0;
 }
 
@@ -256,7 +252,7 @@ parse_json(State *st){
       return num;
     }
     if(!st->error){
-      st->error = st->atoms->am_esyntax;
+      st->error = st->priv->am_esyntax;
     }
     return 0;
   }
@@ -275,11 +271,11 @@ decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   st.buf = enif_alloc(st.buf_size);
   st.env = env;
   st.input = argv[0];
-  st.atoms = (Atoms*)enif_priv_data(env);
+  st.priv = (PrivData*)enif_priv_data(env);
   if(argc == 2){
     st.format = argv[1];
   }else{
-    st.format = st.atoms->am_struct;
+    st.format = st.priv->am_struct;
   }
   st.stack_top = st.stack_down = (ERL_NIF_TERM*)st.buf;
   st.cur = st.buf + st.offset;
@@ -294,12 +290,12 @@ decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   if(ret){
     if(look_ah(&st) != 0U){
       ret = 0;
-      st.error = st.atoms->am_etrailing;
+      st.error = st.priv->am_etrailing;
     }
   }
   enif_free(st.buf);
   if(!ret){
-    return enif_make_tuple3(env, st.atoms->am_error, st.error,
+    return enif_make_tuple3(env, st.priv->am_error, st.error,
 			    enif_make_ulong(env, st.cur - (st.buf + st.offset)));
   }
   return ret;

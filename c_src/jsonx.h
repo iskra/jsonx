@@ -1,5 +1,7 @@
 // Copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
 
+#include "erl_nif.h"
+
 typedef struct{
   ERL_NIF_TERM am_true;
   ERL_NIF_TERM am_false;
@@ -16,7 +18,9 @@ typedef struct{
   ERL_NIF_TERM am_proplist;
   ERL_NIF_TERM am_eep18;
   ERL_NIF_TERM am_no_match;
-}Atoms;
+
+  ErlNifResourceType* records_RSTYPE;
+}PrivData;
 
 
 ERL_NIF_TERM

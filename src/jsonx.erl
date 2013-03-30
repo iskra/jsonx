@@ -1,6 +1,5 @@
 %% @copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
 
-
 %% @doc JSONX is an Erlang library for efficient decode and encode JSON, written in C.
 %%      Works with binaries as strings, arrays as lists and it only knows how to decode UTF-8 (and ASCII).
 %%
@@ -27,12 +26,10 @@
 %%       <li>PropList           -> object</li>
 %%       <li>{json, IOList}     -> include IOList with no validation</li>
 %%      </ul>
+
 -module(jsonx).
-
--export([decode/1, decode/2, encode/1]).
-
+-export([decode/1, decode/2, encode/1, encoder/1]).
 -on_load(init/0).
-
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
 
@@ -43,6 +40,53 @@
 encode(_) ->
     not_loaded(?LINE).
 
+
+%%@doc Encode JSON.
+-spec encoder(RECORDS_DESC) -> ENCODER when
+      RECORDS_DESC :: [{tag, [names]}],
+      ENCODER      :: function().
+%% %% Records descriptions for NIF
+%% {
+%%   Rcnt                                 %% Records count
+%%  ,Fcnt                                 %% Counter all fields in records
+%%  ,Records = [{Tag, Fields_off, Arity}] %% List of records tag, position and length fields
+%%  ,Fields  = [{Name_off, Size}]         %% List of position and size fields names in binary storage
+%%  ,Binsz                                  %% Binary data size
+%%  ,Bin                                  %% Binary storage for names of fields, format - <,"name": >
+%% }
+encoder(R) ->
+    {Rcnt, Fcnt, Binsz, Rs, Fs, Bin} = inspect_records(R),
+    Resource = make_records_resource(Rcnt, Fcnt, Rs, Fs, Binsz, Bin),
+    fun(JSON_TERM) -> encode(JSON_TERM, Resource) end.
+
+make_records_resource(_Rcnt, _Fcnt, _Rs, _Fs, _Binsz, _Bin) ->
+    not_loaded(?LINE).
+encode(_JSON_TERM, _Resource) ->
+    not_loaded(?LINE).
+inspect_records(T) ->
+    {Rcnt, Fcnt, Rs, {Fs, Blen, Bins}} = records(T),
+    {Rcnt, Fcnt, Blen, lists:reverse(Rs), lists:reverse(Fs),
+     iolist_to_binary(lists:reverse(Bins))}.
+records(Rs) ->
+    records_(Rs, {_Rcnt = 0, _OffF = 0, _Rs = [],
+	    {_Fields = [], _OffB = 0, _Bins = []}}).
+records_([], R) ->
+    R;
+records_([{Tag, Fs} | RTail], {Rcnt, OffF, Rs, FsR}) when is_atom(Tag) ->
+    Fcnt = length(Fs),
+    records_(RTail, {Rcnt+1, OffF + Fcnt, [{Tag,  OffF, Fcnt} | Rs] , fields1(Fs, FsR)}).
+fields1([], R) ->
+    R;
+fields1( [Name|NTail], {Fields, OffB, Bins}  ) when is_atom(Name) ->
+    Bin = iolist_to_binary(["\"", atom_to_binary(Name, latin1),<<"\": ">>]),
+    LenB = size(Bin),
+    fields(NTail, {[{OffB, LenB} | Fields], OffB + LenB, [Bin|Bins]}).
+fields([], R) ->
+    R;
+fields( [Name|NTail], {Fields, OffB, Bins}  ) when is_atom(Name) ->
+    Bin = iolist_to_binary([",\"", atom_to_binary(Name, latin1),<<"\": ">>]),
+    LenB = size(Bin),
+    fields(NTail, {[{OffB, LenB} | Fields], OffB + LenB, [Bin|Bins]}).
 
 %%@doc Decode JSON to Erlang term.
 -spec decode(JSON) -> JSON_TERM when
@@ -85,9 +129,9 @@ init() ->
 not_loaded(Line) ->
     exit({not_loaded, [{module, ?MODULE}, {line, Line}]}).
 
-%%
+
 %% Tests
-%%
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -119,7 +163,7 @@ encl1_test() ->  <<"[[[]]]">> = jsonx:encode([[[]]]).
 encl2_test() ->  <<"[true,1,1.1,\"bin\"]">> = jsonx:encode([true, 1, 1.1, <<"bin">>]).
 
 %% %% Test encode empty object
-%% enco0_test() ->  <<"{}">> = jsonx:encode({}).
+enco0_test() ->  {no_match, {}} = jsonx:encode({}).
 
 %% Test encode proplist
 encpl0_test() ->  <<"{\"a\":1}">> = jsonx:encode([{a,1}]). 
@@ -160,6 +204,19 @@ encutf4_test() ->
     {no_match,<<240, 128, 128>>} = jsonx:encode(<<240, 128, 128>>).
 encutf5_test() ->
      {no_match,<<248,128,128,128,128>>} = jsonx:encode(<<248, 128, 128, 128, 128>>).
+
+%% Test encode records
+encrec0_test() ->
+    F = jsonx:encoder([ {none, []}, {person, [name, age]}, {person2, [name, age, phone]} ]),
+    <<"[{},{\"name\": \"IvanDurak\",\"age\": 16},{\"name\": \"BabaYaga\",\"age\": 116,\"phone\": 6666666}]">>
+	=  F([ {none}, {person,<<"IvanDurak">>,16}, {person2, <<"BabaYaga">>, 116, 6666666} ]).
+-record(none, {}).
+-record(person, {name :: binary(), age :: number()}).
+-record(person2, {name, age, phone}).
+encrec1_test() ->
+    F = jsonx:encoder([ {none, record_info(fields, none)}, {person,  record_info(fields, person)}, {person2,  record_info(fields, person2)} ]),
+    <<"[{},{\"name\": \"IvanDurak\",\"age\": 16},{\"name\": \"BabaYaga\",\"age\": 116,\"phone\": 6666666}]">>
+	=  F([ {none}, {person,<<"IvanDurak">>,16}, {person2, <<"BabaYaga">>, 116, 6666666} ]).
 
 %% Test decode atoms
 dectrue_test() ->

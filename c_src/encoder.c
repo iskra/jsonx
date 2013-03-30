@@ -3,18 +3,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include "erl_nif.h"
 #include "jsonx.h"
 #include "jsonx_str.h"
+#include "jsonx_resource.h"
 
 #define FIRST_BIN_SZ (2 * 1024)
 
 typedef struct state_t{
-  Atoms* atoms;
+  PrivData* priv;
   ERL_NIF_TERM no_match;
   ERL_NIF_TERM ret;
   ErlNifBinary bin;
   unsigned char *cur;
+  Entry *records;
 }State;
 
 static inline int match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
@@ -42,12 +43,12 @@ do_reserve(size_t sz, State *st){
     st->cur = st->bin.data + used;
 }
 
-#define e_reserve(sz, st)    if(sz > st->bin.data + st->bin.size - st->cur){do_reserve(sz, st);}
-#define e_putc(c, st)        e_reserve(1, st);*(st->cur++) = c;
-#define e_putc2(c1, c2, st)  e_reserve(2, st); st->cur[0]=c1; st->cur[1]=c2; st->cur+=2;
-#define e_unputc(st)         st->cur--;
-#define e_seek(len, st)      st->cur += (len);
-#define e_puts(len, str, st) e_reserve(len, st); memcpy(st->cur, str, len); e_seek(len, st);
+#define b_reserve(sz, st)    if(sz > st->bin.data + st->bin.size - st->cur){do_reserve(sz, st);}
+#define b_putc(c, st)        b_reserve(1, st);*(st->cur++) = c;
+#define b_putc2(c1, c2, st)  b_reserve(2, st); st->cur[0]=c1; st->cur[1]=c2; st->cur+=2;
+#define b_unputc(st)         st->cur--;
+#define b_seek(len, st)      st->cur += (len);
+#define b_puts(len, str, st) b_reserve(len, st); memcpy(st->cur, str, len); b_seek(len, st);
 
 static inline int
 match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
@@ -55,19 +56,19 @@ match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
     return 0;
   }
   
-  if(enif_is_identical(term, st->atoms->am_true)){
-    e_puts(4, "true", st);
+  if(enif_is_identical(term, st->priv->am_true)){
+    b_puts(4, "true", st);
     return 1;
-  }else if(enif_is_identical(term, st->atoms->am_false)){
-    e_puts(5, "false", st);
+  }else if(enif_is_identical(term, st->priv->am_false)){
+    b_puts(5, "false", st);
     return 1;
-  }else if(enif_is_identical(term, st->atoms->am_null)){
-    e_puts(4, "null", st);
+  }else if(enif_is_identical(term, st->priv->am_null)){
+    b_puts(4, "null", st);
     return 1;
   }
   
   size_t len, reserve;
-  e_reserve(256 + 2, st);
+  b_reserve(256 + 2, st);
   unsigned char *p = st->cur;
   if((len = enif_get_atom(env, term, (char*)p + 1, 256U, ERL_NIF_LATIN1))){
     *p = '"';
@@ -75,11 +76,11 @@ match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
       return 0;
     }
     if(reserve > 0){
-      e_reserve(len + reserve + 2, st);
+      b_reserve(len + reserve + 2, st);
       extend_str_to_jstr((unsigned char*)p + 1, len-1, reserve);
     }
     st->cur += (len + reserve);
-    e_putc('"', st);
+    b_putc('"', st);
     return 1;
   }
   return 0;
@@ -87,7 +88,7 @@ match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
 static inline int
 match_atom_as_string(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   size_t len, reserve;
-  e_reserve(256 + 2, st);
+  b_reserve(256 + 2, st);
   unsigned char *p = st->cur;
   if((len = enif_get_atom(env, term, (char*)p + 1, 256U, ERL_NIF_LATIN1))){
     *p = '"';
@@ -95,11 +96,11 @@ match_atom_as_string(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
       return 0;
     }
     if(reserve > 0){
-      e_reserve(len + reserve + 2, st);
+      b_reserve(len + reserve + 2, st);
       extend_str_to_jstr((unsigned char*)p + 1, len-1, reserve);
     }
     st->cur += (len + reserve);
-    e_putc('"', st);
+    b_putc('"', st);
     return 1;
   }
   return 0;
@@ -116,7 +117,7 @@ match_binary(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
     return 0;
   }
   size_t len = bin.size + reserve;
-   e_reserve(len + 2, st);
+   b_reserve(len + 2, st);
   *(st->cur++) = '"';
   if(reserve > 0){
     copy_str_to_jstr(st->cur, bin.data, bin.size);
@@ -133,9 +134,9 @@ match_int(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   int ip, n;
   if(!enif_get_int(env, term, &ip))
     return 0;
-  e_reserve(24, st);
+  b_reserve(24, st);
   n = sprintf((char*)(st->cur), "%d", ip);
-  e_seek(n, st);
+  b_seek(n, st);
   return 1;  
 }
 
@@ -145,9 +146,9 @@ match_int64(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   int n;
   if(!enif_get_int64(env, term, &ip))
     return 0;
-  e_reserve(24, st);
+  b_reserve(24, st);
   n = sprintf((char*)st->cur, "%lld", ip);
-  e_seek(n, st);
+  b_seek(n, st);
   return 1;  
 }
 
@@ -157,9 +158,9 @@ match_double(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   int n;
   if(!enif_get_double(env, term, &dp))
     return 0;
-  e_reserve(24, st);
+  b_reserve(24, st);
   n = sprintf((char *)st->cur, "%g", dp);
-  e_seek(n, st);
+  b_seek(n, st);
   return 1;  
 }
 
@@ -168,7 +169,7 @@ match_empty_list(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   if(!enif_is_empty_list(env, term)){
     return 0;
   }
-  e_putc2('[', ']', st);
+  b_putc2('[', ']', st);
   return 1;  
 }
 
@@ -189,7 +190,7 @@ match_pair(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   if(enif_get_tuple(env, term, &arity, &tuple)){
     if(arity == 2){
       if(match_string(env, tuple[0], st)){
-	e_putc(':', st);
+	b_putc(':', st);
 	if(match_term(env, tuple[1], st)){
 	  return 1;
 	}
@@ -206,19 +207,19 @@ match_proplist(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   if(!enif_get_list_length(env, term, &len)){
     return 0;
   }
-  e_putc('{',  st);
+  b_putc('{',  st);
   list = term;
   for(i = 0; i < len; i++){
     enif_get_list_cell(env, list, &head, &tail);
     if(i > 0){
-      e_putc(',',  st);
+      b_putc(',',  st);
     }
     if(!match_pair(env, head, st)){
       return 0;
     }
     list = tail;
   }
-  e_putc('}',  st);
+  b_putc('}',  st);
   return 1;
 }
 
@@ -228,22 +229,22 @@ match_list(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   unsigned len;
   if(!enif_get_list_length(env, term, &len))
     return 0;
-  e_putc('[',  st);
+  b_putc('[',  st);
   list = term;
-  assert(enif_get_list_cell(env, list, &head, &tail));
+  enif_get_list_cell(env, list, &head, &tail);
   if(!match_term(env, head, st)){
-    e_unputc(st); // delete '[';
+    b_unputc(st); // delete '[';
     return 0;
   }
   list = tail;   
   while(enif_get_list_cell(env, list, &head, &tail)){
-    e_putc(',',  st);
+    b_putc(',',  st);
     if(!match_term(env, head, st)){
       return 0;
     }
     list = tail;
   }
-  e_putc(']',  st);
+  b_putc(']',  st);
   return 1;
 }
 
@@ -252,10 +253,36 @@ static inline int
 match_json(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   ErlNifBinary bin;
   if(enif_inspect_iolist_as_binary(env, term, &bin)){
-    e_reserve(bin.size, st);
+    b_reserve(bin.size, st);
     memcpy(st->cur, bin.data, bin.size);
-    e_seek(bin.size, st);
+    b_seek(bin.size, st);
     return 1;
+  }
+  return 0;
+}
+
+static inline int
+match_record(ErlNifEnv* env, int arity, const ERL_NIF_TERM *tuple, State *st){
+
+  Record *records = records_offset(st->records);
+  Field *fields = fields_offset(st->records);
+  int i, k;
+  for(i = 0; i < st->records->records_cnt; i++){
+    if(records[i].tag == tuple[0] &&  records[i].arity == (arity -1)){
+      unsigned fds_offset = records[i].fds_offset;
+      unsigned bin_size = 0;
+      b_putc('{', st);
+      for(k = 0; k < records[i].arity; k++){
+	Field field = fields[fds_offset + k];
+	bin_size += field.size;
+	//FIXME {
+	b_puts(field.size, st->records->bin.data + field.offset, st);
+	if(!match_term(env, tuple[k+1], st))
+	  return 0;
+      }
+      b_putc('}', st);
+      return 1;
+    }
   }
   return 0;
 }
@@ -266,64 +293,79 @@ match_tuple(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   int arity;
   if(!enif_get_tuple(env, term, &arity, &tuple))
     return 0;
-  if(arity == 1){
-    //eep18
-    return (match_proplist(env, tuple[0], st));
-  }else if(arity == 2){
-    if(enif_is_identical(tuple[0], st->atoms->am_struct)){
-      //struct
-      return match_proplist(env, tuple[1], st);
-    }else   if(enif_is_identical(tuple[0], st->atoms->am_json)){
-      //json
-      return  match_json(env, tuple[1], st);
+  if(arity > 0){ 
+    if(enif_is_atom(env, tuple[0])){
+      if(arity == 2){
+	if(enif_is_identical(tuple[0], st->priv->am_struct)){
+	  //struct
+	  return match_proplist(env, tuple[1], st);
+	}else   if(enif_is_identical(tuple[0], st->priv->am_json)){
+	  //json
+	  return  match_json(env, tuple[1], st);
+	}
+      }
+      //records
+      if(st->records){
+	return match_record(env, arity, tuple, st);
+      }
+    }
+    if(arity == 1){
+      //eep18
+      return (match_proplist(env, tuple[0], st));
     }
   }
   return 0;  
 }
 
-static int
-match_term(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
-  if      (match_binary(env, term, st)){
-    return 1;
-  }else if(match_atom(env, term, st)){
-    return 1;
-  }else if(match_int(env, term, st)){
-    return 1;
-  }else if(match_empty_list(env, term, st)){
-    return 1;
-  }else if(match_list(env, term, st)){
-    return 1;
-  }else if(match_proplist(env, term, st)){
-    return 1;
-  }else if(match_tuple(env, term, st)){
-    return 1;
-  }else if(match_double(env, term, st)){
-    return 1;
-  }else if(match_int64(env, term, st)){
-    return 1;
+  static int
+    match_term(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
+    if      (match_binary(env, term, st)){
+      return 1;
+    }else if(match_atom(env, term, st)){
+      return 1;
+    }else if(match_int(env, term, st)){
+      return 1;
+    }else if(match_empty_list(env, term, st)){
+      return 1;
+    }else if(match_list(env, term, st)){
+      return 1;
+    }else if(match_proplist(env, term, st)){
+      return 1;
+    }else if(match_tuple(env, term, st)){
+      return 1;
+    }else if(match_double(env, term, st)){
+      return 1;
+    }else if(match_int64(env, term, st)){
+      return 1;
+    }
+    if(!st->no_match){
+      st->no_match = term;
+    }
+    return 0;
   }
-  if(!st->no_match){
-    st->no_match = term;
-  }
-  return 0;
-}
 
-ERL_NIF_TERM
-encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
-  State st = {
-    .atoms = (Atoms*)enif_priv_data(env),
-    .no_match =  0,
-    .ret =  0,
-    .bin = {0, NULL},
-    .cur = NULL
-  };
-  assert(enif_alloc_binary(FIRST_BIN_SZ, &st.bin));
-  st.cur = st.bin.data;
+  ERL_NIF_TERM
+    encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
+    State st = {
+      .priv = (PrivData*)enif_priv_data(env),
+      .no_match =  0,
+      .ret =  0,
+      .bin = {0, NULL},
+      .cur = NULL,
+      .records = NULL
+    };
+    if(argc == 2){
+      Entry *entry_rs;
+      assert(enif_get_resource(env, argv[1], st.priv->records_RSTYPE, (void**)&entry_rs));
+      st.records = entry_rs;
+    }
+    assert(enif_alloc_binary(FIRST_BIN_SZ, &st.bin));
+    st.cur = st.bin.data;
 
-  if(match_term(env, argv[0], &st)){
-    enif_realloc_binary(&st.bin, st.cur - st.bin.data);
-    return enif_make_binary(env, &st.bin);
-  }else{
-    return enif_make_tuple2(env, st.atoms->am_no_match, st.no_match);
+    if(match_term(env, argv[0], &st)){
+      enif_realloc_binary(&st.bin, st.cur - st.bin.data);
+      return enif_make_binary(env, &st.bin);
+    }else{
+      return enif_make_tuple2(env, st.priv->am_no_match, st.no_match);
+    }
   }
-}

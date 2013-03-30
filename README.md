@@ -2,7 +2,8 @@
 JSONX is an Erlang library for efficient decode and encode JSON, written in C.
 Works with binaries as strings, arrays as lists and it only knows how to decode UTF-8 (and ASCII).
 
-### Decode (json -> erlang)
+Decode (json -> erlang)
+----------------------
 
  - null   -> atom null
  - true   -> atom true
@@ -12,7 +13,8 @@ Works with binaries as strings, arrays as lists and it only knows how to decode 
  - array  -> list
  - object -> {struct, PropList}, optional eep18 or proplist.
 
-### Encode (erlang -> json)
+Encode (erlang -> json)
+-----------------------
 
  - atom null 	      -> null
  - atom true 	      -> true
@@ -20,19 +22,19 @@ Works with binaries as strings, arrays as lists and it only knows how to decode 
  - any other atom     -> string
  - binary             -> string
  - number             -> number
- - {struct, PropList} -> object
- - {PropList}         -> object
- - PropList           -> object
  - {json, IOList}     -> include IOList with no validation
+ - PropList, {struct, PropList}, {PropList} -> object
 
-### INSTALL and DOC
+INSTALL and DOC
+---------------
 
 * cd jsonx
 * make
 * make doc
 * firefox doc/index.html&
 
-### Examples encode json
+Examples encode json
+--------------------
 
 ~~~~~
 1>  jsonx:encode([1, 2.3, true, false, null, atom, <<"string">>, []]).
@@ -51,9 +53,10 @@ Works with binaries as strings, arrays as lists and it only knows how to decode 
 <<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>
 ~~~~~
 
-### Examples encode record to json
+Examples encode record to json
+------------------------------
 
-~~~~~
+```erlang
 -module(x).
 -export([encode_records_test/0]).
 -record(none, {}).
@@ -64,7 +67,7 @@ encode_records_test() ->
     jsonx:encoder([{none,     record_info(fields, none)},
                    {person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)} ]).
-~~~~~
+```
 
 ~~~~~
 10> c(x).

@@ -67,7 +67,7 @@ match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
     return 1;
   }
   
-  size_t len, reserve;
+  unsigned len, reserve;
   b_reserve(256 + 2, st);
   unsigned char *p = st->cur;
   if((len = enif_get_atom(env, term, (char*)p + 1, 256U, ERL_NIF_LATIN1))){
@@ -109,7 +109,7 @@ match_atom_as_string(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
 static inline int
 match_binary(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   ErlNifBinary bin;
-  size_t reserve;
+  unsigned reserve;
   if(!enif_inspect_binary(env, term, &bin))
     return 0;
   if(!check_str_for_json(bin.data, bin.size, &reserve)){

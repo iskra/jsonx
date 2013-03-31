@@ -2,28 +2,33 @@
 JSONX is an Erlang library for efficient decode and encode JSON, written in C.
 Works with binaries as strings, arrays as lists and it only knows how to decode UTF-8 (and ASCII).
 
-Decode (json -> erlang)
+Decode (JSON -> Erlang)
 ----------------------
 
- - null   -> atom null
- - true   -> atom true
- - false  -> atom false
- - string -> binary
- - number -> number
- - array  -> list
- - object -> {struct, PropList}, optional eep18 or proplist.
+    null             -> null
+    true             -> true
+    false            -> false
+    atom             -> <<"atom">>
+    "string"         -> <<"binary">>
+    [1, 2.3, []]     ->  [1, 2.3, []]
+    {"this": "json"} -> {struct, [{<<"this">>: <<"json">>}]} %% default struct
+    {"this": "json"} -> [{<<"this">>: <<"json">>}]           %% optional proplist
+    {"this": "json"} -> {struct, [{<<"this">>: <<"json">>}]} %% optional eep18
 
-Encode (erlang -> json)
+Encode (Erlang -> JSON)
 -----------------------
 
- - atom null 	      -> null
- - atom true 	      -> true
- - atom true 	      -> false
- - any other atom     -> string
- - binary             -> string
- - number             -> number
- - {json, IOList}     -> include IOList with no validation
- - PropList, {struct, PropList}, {PropList} -> object
+    null                                 -> null
+    true                                 -> true
+    false                                -> false
+    atom                                 -> "atom"
+    <<"str">>                            -> "str"
+    [1, 2.99]                            -> [1, 2.99]
+    {struct, [{<<"this">>: <<"json">>}]} -> {"this": "json"}
+    [{<<"this">>: <<"json">>}]           -> {"this": "json"}
+    {[{<<"this">>: <<"json">>}]}         -> {"this": "json"}
+    {json, IOList}                       -> include `iolist_to_binary(IOList)` with no validation
+    -record(...)                         -> See bellow
 
 INSTALL and DOC
 ---------------

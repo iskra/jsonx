@@ -208,7 +208,6 @@ check_noescaped_jstr(unsigned char *str, unsigned char **endptr){
   }
 }
 
-
 //Validate utf8 and calculate reserve bytes for escape chars
 static inline int
 check_str_for_json(unsigned char *str, unsigned len, unsigned *reserve){

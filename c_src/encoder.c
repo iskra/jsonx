@@ -87,7 +87,7 @@ match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
 }
 static inline int
 match_atom_as_string(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
-  size_t len, reserve;
+  unsigned len, reserve;
   b_reserve(256 + 2, st);
   unsigned char *p = st->cur;
   if((len = enif_get_atom(env, term, (char*)p + 1, 256U, ERL_NIF_LATIN1))){
@@ -147,7 +147,13 @@ match_int64(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   if(!enif_get_int64(env, term, &ip))
     return 0;
   b_reserve(24, st);
+#if (defined(__WIN32__) || defined(_WIN32) || defined(_WIN32_))
+  n = sprintf((char*)st->cur, "%ld", ip);
+#elif SIZEOF_LONG == 8
+  n = sprintf((char*)st->cur, "%ld", ip);
+#else
   n = sprintf((char*)st->cur, "%lld", ip);
+#endif
   b_seek(n, st);
   return 1;  
 }

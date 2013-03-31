@@ -8,7 +8,6 @@ Decode (JSON -> Erlang)
     null             -> null
     true             -> true
     false            -> false
-    atom             -> <<"atom">>
     "string"         -> <<"binary">>
     [1, 2.3, []]     ->  [1, 2.3, []]
     {"this": "json"} -> {struct, [{<<"this">>: <<"json">>}]} %% default struct

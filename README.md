@@ -2,6 +2,11 @@
 JSONX is an Erlang library for efficient decode and encode JSON, written in C.
 Works with binaries as strings, arrays as lists and it only knows how to decode UTF-8 (and ASCII).
 
+JSONX VERY FAST!
+----------------
+
+See benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test)
+
 Decode (JSON -> Erlang)
 ----------------------
 
@@ -26,7 +31,7 @@ Encode (Erlang -> JSON)
     {struct, [{<<"this">>: <<"json">>}]} -> {"this": "json"}
     [{<<"this">>: <<"json">>}]           -> {"this": "json"}
     {[{<<"this">>: <<"json">>}]}         -> {"this": "json"}
-    {json, IOList}                       -> include `iolist_to_binary(IOList)` with no validation
+    {json, IOList}                       -> `iolist_to_binary(IOList)`  %% include with no validation
     -record(...)                         -> See bellow
 
 INSTALL and DOC

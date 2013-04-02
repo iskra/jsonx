@@ -5,7 +5,8 @@ Works with binaries as strings, arrays as lists and it only knows how to decode 
 JSONX VERY FAST!
 ----------------
 
-See benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test)
+See benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test) and tests encode records in `/benchmarks/test_encode_records.erl`
+
 
 Decode (JSON -> Erlang)
 ----------------------

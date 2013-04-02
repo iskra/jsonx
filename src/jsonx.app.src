@@ -3,7 +3,7 @@
 {application, jsonx,
  [
   {description, "JSON library for Erlang writen in C"},
-  {vsn, "1.0"},
+  {vsn, "1.1"},
   {applications, [
                   kernel,
                   stdlib

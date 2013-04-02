@@ -15,9 +15,9 @@ Decode (JSON -> Erlang)
     false            -> false
     "string"         -> <<"binary">>
     [1, 2.3, []]     ->  [1, 2.3, []]
-    {"this": "json"} -> {struct, [{<<"this">>: <<"json">>}]} %% default struct
+    {"this": "json"} -> {[{<<"this">>: <<"json">>}]}         %% default eep18
     {"this": "json"} -> [{<<"this">>: <<"json">>}]           %% optional proplist
-    {"this": "json"} -> {struct, [{<<"this">>: <<"json">>}]} %% optional eep18
+    {"this": "json"} -> {struct, [{<<"this">>: <<"json">>}]} %% optional struct
 
 Encode (Erlang -> JSON)
 -----------------------
@@ -60,6 +60,31 @@ Examples encode json
 %% Object as eep18 propsal
 4>  jsonx:encode( {[{name, <<"Ivan">>}, {age, 33}, {phones, [3332211, 4443322]}]} ).
 <<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>
+~~~~~
+
+Examples decode json
+--------------------
+
+~~~~~
+1> jsonx:decode(<<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>).
+{[{<<"name">>,<<"Ivan">>},
+  {<<"age">>,33},
+  {<<"phones">>,[3332211,4443322]}]}
+
+2> jsonx:decode(<<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>, [{format, eep18}]).
+{[{<<"name">>,<<"Ivan">>},
+  {<<"age">>,33},
+  {<<"phones">>,[3332211,4443322]}]}
+
+3> jsonx:decode(<<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>, [{format, proplist}]).
+[{<<"name">>,<<"Ivan">>},
+ {<<"age">>,33},
+ {<<"phones">>,[3332211,4443322]}]
+
+4> jsonx:decode(<<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>, [{format, struct}]). 
+{struct,[{<<"name">>,<<"Ivan">>},
+         {<<"age">>,33},
+         {<<"phones">>,[3332211,4443322]}]}
 ~~~~~
 
 Examples encode record to json

@@ -275,7 +275,7 @@ decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   if(argc == 2){
     st.format = argv[1];
   }else{
-    st.format = st.priv->am_struct;
+    st.format = st.priv->am_eep18;
   }
   st.stack_top = st.stack_down = (ERL_NIF_TERM*)st.buf;
   st.cur = st.buf + st.offset;

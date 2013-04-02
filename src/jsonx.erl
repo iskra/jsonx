@@ -100,7 +100,7 @@ decode(_) ->
       JSON      :: binary(),
       Options   :: [{format, struct|eep18|proplist}],
       JSON_TERM :: any().
-decode(B, []) -> decode2(B, struct);
+decode(B, []) -> decode2(B, eep18);
 decode(B, [{format, struct}]) ->   decode2(B, struct);
 decode(B, [{format, eep18}]) ->    decode2(B, eep18);
 decode(B, [{format, proplist}]) -> decode2(B, proplist);
@@ -280,15 +280,15 @@ decarr1_test() ->
 
 %% Test decode object
 decobj0_test() ->
-    {struct,[]} = jsonx:decode(<<"{}">>).
+    {[]} = jsonx:decode(<<"{}">>).
 decobj1_test() ->
-    {struct,[{<<"a">>,1}]} = jsonx:decode(<<"{\"a\": 1}">>).
+    {[{<<"a">>,1}]} = jsonx:decode(<<"{\"a\": 1}">>).
 decobj2_test() ->
-    {struct,[{<<"a">>,1}, {<<"XX">>, [true, false]}]} = jsonx:decode(<<"{\"a\": 1, \"XX\": [true, false]}">>).
+    {[{<<"a">>,1}, {<<"XX">>, [true, false]}]} = jsonx:decode(<<"{\"a\": 1, \"XX\": [true, false]}">>).
 
 %% Test decode/2
 dec2obj0_test() ->
-    {struct,[]} = jsonx:decode(<<"{}">>, []).
+    {[]} = jsonx:decode(<<"{}">>, []).
 dec2obj1_test() ->
     {struct,[]} = jsonx:decode(<<"{}">>, [{format, struct}]).
 dec2obj2_test() ->

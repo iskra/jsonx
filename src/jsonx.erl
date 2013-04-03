@@ -51,11 +51,12 @@ encode(_) ->
 %%  ,Fcnt                                 %% Counter all fields in records
 %%  ,Records = [{Tag, Fields_off, Arity}] %% List of records tag, position and length fields
 %%  ,Fields  = [{Name_off, Size}]         %% List of position and size fields names in binary storage
-%%  ,Binsz                                  %% Binary data size
+%%  ,Binsz                                %% Binary data size
 %%  ,Bin                                  %% Binary storage for names of fields, format - <,"name": >
 %% }
 encoder(RDs) ->
-    {Rcnt, Fcnt, Binsz, Records, Fields, Bin} = inspect_records(RDs),
+    RDsc = check_records(RDs),
+    {Rcnt, Fcnt, Binsz, Records, Fields, Bin} = inspect_records(RDsc),
     Resource = make_records_resource(Rcnt, Fcnt, Records, Fields, Binsz, Bin),
     fun(JSON_TERM) -> encode(JSON_TERM, Resource) end.
 
@@ -64,6 +65,18 @@ make_records_resource(_Rcnt, _Fcnt, _Records, _Fields, _Binsz, _Bin) ->
 
 encode(_JSON_TERM, _Resource) ->
     not_loaded(?LINE).
+
+check_records(Records) ->
+    Rs1 = lists:ukeysort(1, Records),
+    case (length(Records) == length(Rs1)) of
+	true -> case lists:all( fun is_uniq_elems/1, [Names || {_Tag, Names} <- Rs1]) of
+		    true -> Rs1;
+		    false -> invalid_desc
+		end;
+	false -> invalid_desc
+    end.
+is_uniq_elems(L) ->
+    length(L) == length(lists:usort(L)).
 
 inspect_records(T) ->
     {Rcnt, Fcnt, Records, {Fields, Blen, Bins}} = records(T),

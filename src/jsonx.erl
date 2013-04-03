@@ -54,27 +54,29 @@ encode(_) ->
 %%  ,Binsz                                  %% Binary data size
 %%  ,Bin                                  %% Binary storage for names of fields, format - <,"name": >
 %% }
-encoder(R) ->
-    {Rcnt, Fcnt, Binsz, Rs, Fs, Bin} = inspect_records(R),
-    Resource = make_records_resource(Rcnt, Fcnt, Rs, Fs, Binsz, Bin),
+encoder(RDs) ->
+    {Rcnt, Fcnt, Binsz, Records, Fields, Bin} = inspect_records(RDs),
+    Resource = make_records_resource(Rcnt, Fcnt, Records, Fields, Binsz, Bin),
     fun(JSON_TERM) -> encode(JSON_TERM, Resource) end.
 
-make_records_resource(_Rcnt, _Fcnt, _Rs, _Fs, _Binsz, _Bin) ->
+make_records_resource(_Rcnt, _Fcnt, _Records, _Fields, _Binsz, _Bin) ->
     not_loaded(?LINE).
+
 encode(_JSON_TERM, _Resource) ->
     not_loaded(?LINE).
+
 inspect_records(T) ->
-    {Rcnt, Fcnt, Rs, {Fs, Blen, Bins}} = records(T),
-    {Rcnt, Fcnt, Blen, lists:reverse(Rs), lists:reverse(Fs),
+    {Rcnt, Fcnt, Records, {Fields, Blen, Bins}} = records(T),
+    {Rcnt, Fcnt, Blen, lists:reverse(Records), lists:reverse(Fields),
      iolist_to_binary(lists:reverse(Bins))}.
-records(Rs) ->
-    records_(Rs, {_Rcnt = 0, _OffF = 0, _Rs = [],
+records(Records) ->
+    records_(Records, {_Rcnt = 0, _OffF = 0, _Records = [],
 	    {_Fields = [], _OffB = 0, _Bins = []}}).
 records_([], R) ->
     R;
-records_([{Tag, Fs} | RTail], {Rcnt, OffF, Rs, FsR}) when is_atom(Tag) ->
-    Fcnt = length(Fs),
-    records_(RTail, {Rcnt+1, OffF + Fcnt, [{Tag,  OffF, Fcnt} | Rs] , fields1(Fs, FsR)}).
+records_([{Tag, Fields} | RTail], {Rcnt, OffF, Records, FieldsR}) when is_atom(Tag) ->
+    Fcnt = length(Fields),
+    records_(RTail, {Rcnt+1, OffF + Fcnt, [{Tag,  OffF, Fcnt} | Records] , fields1(Fields, FieldsR)}).
 fields1([], R) ->
     R;
 fields1( [Name|NTail], {Fields, OffB, Bins}  ) when is_atom(Name) ->

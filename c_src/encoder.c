@@ -5,7 +5,6 @@
 #include <assert.h>
 #include "jsonx.h"
 #include "jsonx_str.h"
-#include "jsonx_resource.h"
 
 #define FIRST_BIN_SZ (2 * 1024)
 
@@ -15,7 +14,7 @@ typedef struct state_t{
   ERL_NIF_TERM ret;
   ErlNifBinary bin;
   unsigned char *cur;
-  Entry *records;
+  EncEntry *records;
 }State;
 
 static inline int match_atom(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
@@ -270,8 +269,8 @@ match_json(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
 static inline int
 match_record(ErlNifEnv* env, int arity, const ERL_NIF_TERM *tuple, State *st){
 
-  Record *records = records_offset(st->records);
-  Field *fields = fields_offset(st->records);
+  EncRecord *records = enc_records_base(st->records);
+  EncField *fields = enc_fields_base(st->records);
   int i, k;
   for(i = 0; i < st->records->records_cnt; i++){
     if(records[i].tag == tuple[0] &&  records[i].arity == (arity -1)){
@@ -279,7 +278,7 @@ match_record(ErlNifEnv* env, int arity, const ERL_NIF_TERM *tuple, State *st){
       unsigned bin_size = 0;
       b_putc('{', st);
       for(k = 0; k < records[i].arity; k++){
-	Field field = fields[fds_offset + k];
+	EncField field = fields[fds_offset + k];
 	bin_size += field.size;
 	//FIXME {
 	b_puts(field.size, st->records->bin.data + field.offset, st);
@@ -361,8 +360,8 @@ match_tuple(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
       .records = NULL
     };
     if(argc == 2){
-      Entry *entry_rs;
-      assert(enif_get_resource(env, argv[1], st.priv->records_RSTYPE, (void**)&entry_rs));
+      EncEntry *entry_rs;
+      assert(enif_get_resource(env, argv[1], st.priv->encoder_RSTYPE, (void**)&entry_rs));
       st.records = entry_rs;
     }
     assert(enif_alloc_binary(FIRST_BIN_SZ, &st.bin));

@@ -1,5 +1,5 @@
 // Copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
-
+#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
@@ -10,22 +10,24 @@
 #define  JS_OFFSET (8 * sizeof(ERL_NIF_TERM))
 
 typedef struct{
-  ErlNifEnv* env;
-  PrivData *priv;
-  size_t buf_size;
+  ErlNifEnv*    env;
+  PrivData      *priv;
+  size_t        buf_size;
   unsigned char *buf;
   unsigned char *cur;
-  size_t offset;
+  size_t        offset;
   ERL_NIF_TERM  input;
   ERL_NIF_TERM  format;  //struct, eep18, proplist
   ERL_NIF_TERM  error;
   ERL_NIF_TERM  *stack_top;
   ERL_NIF_TERM  *stack_down;
+  void           *records;
 } State;
 
 static inline ERL_NIF_TERM parse_json(State* st);
 static inline ERL_NIF_TERM parse_array(State* st);
 static inline ERL_NIF_TERM parse_object(State* st);
+static inline ERL_NIF_TERM parse_object_to_record(State* st);
 static inline ERL_NIF_TERM parse_string(State* st);
 static inline ERL_NIF_TERM parse_number(State* st);
 static inline ERL_NIF_TERM parse_true(State* st);
@@ -107,6 +109,58 @@ parse_object(State* st){
   ERL_NIF_TERM key, val, pair;
   unsigned char c;
 
+  st->cur++;
+  if(look_ah(st) == '}'){
+    st->cur++;
+    plist = enif_make_list(st->env, 0);
+    goto ret;
+  }
+  size_t stack_off =  st->stack_top - st->stack_down;
+  for(;;){
+    if(look_ah(st) == '"'){
+      if((key = parse_string(st))){
+	if(look_ah(st) == ':'){
+	  st->cur++;
+	  if((val = parse_json(st))){
+	    pair = enif_make_tuple2(st->env, key, val);
+	    push_term(st, pair);
+	    c = look_ah(st);
+	    st->cur++;
+	    if(c == ','){
+	      continue;
+	    }else if(c == '}'){
+	      ERL_NIF_TERM *down =  st->stack_down + stack_off;
+	      plist = enif_make_list_from_array(st->env, down, st->stack_top - down);
+	      st->stack_top = down;
+	      goto ret;
+	    }
+	  }
+	}
+      }
+    }
+    if(!st->error){
+      st->error = st->priv->am_esyntax;
+    }
+    return 0;
+  }
+ ret:
+  if(st->format == st->priv->am_struct){
+    return enif_make_tuple2(st->env, st->priv->am_struct, plist);
+  }else if(st->format == st->priv->am_eep18){
+    return enif_make_tuple1(st->env, plist);
+  }else if(st->format == st->priv->am_proplist){
+    return plist;
+  }
+  assert(0);
+}
+
+static inline ERL_NIF_TERM
+parse_object_to_record(State* st){
+  ERL_NIF_TERM plist;
+  ERL_NIF_TERM key, val, pair;
+  unsigned char c;
+  fprintf(stderr, "=== parse_object_to_record\n");
+  assert(0);
   st->cur++;
   if(look_ah(st) == '}'){
     st->cur++;
@@ -242,7 +296,7 @@ parse_json(State *st){
   ERL_NIF_TERM num;
   switch(look_ah(st)){
   case '\"' : return parse_string(st);
-  case '{'  : return parse_object(st);
+  case '{'  : return (st->records ? parse_object_to_record(st) : parse_object(st));
   case '['  : return parse_array(st);
   case 't'  : return parse_true(st);
   case 'f'  : return parse_false(st);
@@ -260,23 +314,24 @@ parse_json(State *st){
 
 ERL_NIF_TERM
 decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
+
+  if (argc == 3) return enif_make_atom(env, "not_implement");
+
   ErlNifBinary input;
   if(!enif_inspect_binary(env, argv[0], &input)){
     return enif_make_badarg(env);
   }
-
+  assert(argc > 1 && argc <= 3 );
   State st;
+  //st.records = ((argc == 3) ? argv[2] :  0);
+  st.records = NULL;
   st.offset = JS_OFFSET;
   st.buf_size = st.offset + input.size + 4;
   st.buf = enif_alloc(st.buf_size);
   st.env = env;
   st.input = argv[0];
   st.priv = (PrivData*)enif_priv_data(env);
-  if(argc == 2){
-    st.format = argv[1];
-  }else{
-    st.format = st.priv->am_eep18;
-  }
+  st.format = argv[1];
   st.stack_top = st.stack_down = (ERL_NIF_TERM*)st.buf;
   st.cur = st.buf + st.offset;
   st.error = 0;

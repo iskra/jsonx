@@ -1,5 +1,5 @@
 
-JSONX is an Erlang library for efficient decode and encode JSON, written in C.
+JSONX is an Erlang library for efficient decode and encode JSON, implemented in Erlang NIFs.
 Works with binaries as strings, arrays as lists and it only knows how to decode UTF-8 (and ASCII).
 
 JSONX VERY FAST!

@@ -1,5 +1,5 @@
 // Copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
-#include <stdio.h>
+
 #include "erl_nif.h"
 
 typedef struct{
@@ -12,6 +12,7 @@ typedef struct{
   ERL_NIF_TERM am_estr;
   ERL_NIF_TERM am_esyntax;
   ERL_NIF_TERM am_etrailing;
+  ERL_NIF_TERM am_undefined_record;
 
   ERL_NIF_TERM am_json;
   ERL_NIF_TERM am_struct;
@@ -22,7 +23,6 @@ typedef struct{
   ErlNifResourceType* encoder_RSTYPE;
   ErlNifResourceType* decoder_RSTYPE;
 }PrivData;
-
 
 ERL_NIF_TERM decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 ERL_NIF_TERM encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
@@ -99,10 +99,33 @@ return sizeof(EncEntry) + sizeof(EncRecord)*rec_cnt + sizeof(EncField)*field_cnt
 #define BITS_PER_WORD       (sizeof(long) * 8)
 #define BITS_TO_WORDS(nb)   ((nb + BITS_PER_WORD - 1) / BITS_PER_WORD)
 #define BITS_TO_BYTES(nb)   (BITS_TO_WORDS(nb) * sizeof(long))
+#define BITS_TO_ETERM(nb)   (BITS_TO_WORDS(nb) * sizeof(long) / sizeof(ERL_NIF_TERM))
 
 static inline void
-set_bit(int nb, unsigned long *ptr){
+set_bit(int nb, long *ptr){
   ptr[nb / BITS_PER_WORD] |= 1UL << (nb % BITS_PER_WORD);
+}
+
+static inline int
+cmp_mask(int nwords, long *ptr1, long *ptr2){
+  int i;
+  for(i = 0; i < nwords; i++){
+    if(ptr1[i] != ptr2[i])
+      return 0;
+  }
+  return 1;
+}
+//return -1 on not search
+static inline int
+find_mask(unsigned nb, long *pattern, unsigned nelem, long *masks){
+  unsigned ws = BITS_TO_WORDS(nb);
+  int i;
+  for(i = 0; i < nelem; i++){
+    long *ptr = masks + i * ws;
+    if(cmp_mask(ws, pattern, ptr))
+      return i;
+  }
+  return -1;
 }
 
 typedef struct{
@@ -147,9 +170,9 @@ records_size(unsigned records_cnt){
   return records_cnt * sizeof(DecRecord);
 }
 
-static inline long unsigned*
+static inline long *
 bit_mask_base(DecEntry *dec_entry, unsigned ukeys_cnt, unsigned keys_cnt, unsigned records_cnt){
-  return (long unsigned*)((void *)records_base(dec_entry, ukeys_cnt, keys_cnt) + records_size(records_cnt));
+  return (long *)((void *)records_base(dec_entry, ukeys_cnt, keys_cnt) + records_size(records_cnt));
 }
 
 static inline size_t
@@ -161,6 +184,5 @@ static inline size_t
 dec_resource_size(unsigned records_cnt, unsigned ukeys_cnt, unsigned keys_cnt){
   size_t ret = sizeof(DecEntry) + ukeys_size(ukeys_cnt) + keys_size(keys_cnt)
     + records_size(records_cnt) + bit_mask_array_size(ukeys_cnt, records_cnt);
-  fprintf(stderr, "dec_resource_size: %d\r\n", ret);
   return ret;
 }

@@ -12,6 +12,7 @@
 %%       <li>number -> number</li>
 %%       <li>array  -> list</li>
 %%       <li>object -> {PropList}, optional struct or proplist.</li>
+%%       <li>object -> #record{...} - decoder must be predefined</li>
 %%      </ul>
 %%      <h3>Encode (erlang -> json)</h3>
 %%      <ul>
@@ -24,11 +25,12 @@
 %%       <li>{struct, PropList} -> object</li>
 %%       <li>{PropList}         -> object</li>
 %%       <li>PropList           -> object</li>
+%%       <li>#record{...}       -> object - encoder must be predefined</li>
 %%       <li>{json, IOList}     -> include IOList with no validation</li>
 %%      </ul>
 
 -module(jsonx).
--export([encode/1, decode/1, decode/2, encoder/1, decoder/1, decoder/2]).
+-export([encode/1, decode/1, decode/2, encoder/1, decoder/1]).
 -on_load(init/0).
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
@@ -57,7 +59,7 @@ decode(JSON, Options) ->
     decode_opt(JSON, parse_opt(Options)).
 
 %% %% Records descriptions for encoder resource
-%% {Rcnt                                 %% Records count
+%% {Rcnt                                  %% Records count
 %%  ,Fcnt                                 %% Counter all fields in records
 %%  ,Records = [{Tag, Fields_off, Arity}] %% List of records tag, position and length fields
 %%  ,Fields  = [{Name_off, Size}]         %% List of position and size fields names in binary storage
@@ -74,29 +76,21 @@ encoder(Records_desc) ->
     Resource = make_encoder_resource(Rcnt, Fcnt, Records, Fields, Binsz, Bin),
     fun(JSON_TERM) -> encode_res(JSON_TERM, Resource) end.
 
-%%@doc Build JSON decoder with options.
--spec decoder(RECORDS_DESC, OPTIONS) -> DECODER when
-      RECORDS_DESC :: [{tag, [names]}],
-      OPTIONS   :: [{format, struct|eep18|proplist}],
-      DECODER      :: function().
-decoder(Records_desc, Options) ->
-    _ = decode_res(1,2,3 ),
-    _Opt = parse_opt(Options),
-    {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
-    Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
-    {
-      %%Opt,
-      Resource
-     %% {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3}
-    }.
-%%     fun(JSON_TERM) -> decode_res(JSON_TERM, parse_opt(Options), Resource) end.
-
 %%@doc Build JSON decoder.
 -spec decoder(RECORDS_DESC) -> DECODER when
       RECORDS_DESC :: [{tag, [names]}],
       DECODER      :: function().
 decoder(Records_desc) ->
-    decoder(Records_desc, [{format, eep18}]).
+    %% _ = decode_res(1,2,3 ),
+    %% _Opt = parse_opt(Options),
+    {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
+    Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
+    %% {
+    %%   Opt,
+    %%   Resource
+    %%  {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3}
+    %% }.
+     fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, Resource) end.
 	    
 
 %% Private, call NIF

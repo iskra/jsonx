@@ -12,11 +12,13 @@ xref:
 
 test:
 	@mkdir -p .eunit
+	@-rm -rf .eunit
 	$(REBAR) eunit
 
 clean:
 	@$(REBAR) clean
 	@-rm -rvf deps ebin doc .eunit
+	@-rm README.html
 	@-rm c_src/*.o
 	@-rm priv/*.so
 	@-rm */*~

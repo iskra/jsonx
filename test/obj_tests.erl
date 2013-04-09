@@ -36,4 +36,4 @@ dec2obj2_test() ->
 dec2obj3_test() ->
     [] = jsonx:decode(<<"{}">>, [{format, proplist}]).
 dec2obj4_test() ->
-    [] = jsonx:decode(<<"{}">>, [{format, eep18}, {format, struct}, {format, proplist}]).
+    {[]} = jsonx:decode(<<"{}">>, [{format, eep18}, {format, struct}, {format, proplist}]).

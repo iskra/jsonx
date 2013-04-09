@@ -10,23 +10,26 @@
 #define  JS_OFFSET (8 * sizeof(ERL_NIF_TERM))
 
 typedef struct{
-  ErlNifEnv* env;
-  PrivData *priv;
-  size_t buf_size;
+  ErlNifEnv*    env;
+  PrivData      *priv;
+  size_t        buf_size;
   unsigned char *buf;
   unsigned char *cur;
-  size_t offset;
+  size_t        offset;
   ERL_NIF_TERM  input;
   ERL_NIF_TERM  format;  //struct, eep18, proplist
   ERL_NIF_TERM  error;
   ERL_NIF_TERM  *stack_top;
   ERL_NIF_TERM  *stack_down;
+  DecEntry      *resource;
 } State;
 
 static inline ERL_NIF_TERM parse_json(State* st);
 static inline ERL_NIF_TERM parse_array(State* st);
 static inline ERL_NIF_TERM parse_object(State* st);
+static inline ERL_NIF_TERM parse_object_to_record(State* st);
 static inline ERL_NIF_TERM parse_string(State* st);
+static inline ERL_NIF_TERM parse_string_as_existing_atom(State* st);
 static inline ERL_NIF_TERM parse_number(State* st);
 static inline ERL_NIF_TERM parse_true(State* st);
 static inline ERL_NIF_TERM parse_false(State* st);
@@ -52,19 +55,26 @@ grow_stack(State *st){
   st->stack_top = new_top;
 }
 
+static inline unsigned char
+look_ah(State *st){
+  while(isspace(*st->cur))
+    st->cur++;
+  return *(st->cur);
+}
 static inline void
-push_term(State* st, ERL_NIF_TERM val){
+push_term(State *st, ERL_NIF_TERM val){
   if(((unsigned char*)st->stack_top + sizeof(ERL_NIF_TERM)) > (st->cur)){
     grow_stack(st);
   }
   *(st->stack_top++) = val;
 }
 
-static inline unsigned char
-look_ah(State *st){
-  while(isspace(*st->cur))
-    st->cur++;
-  return *(st->cur);
+static inline void
+reserve_stack(State* st, unsigned sz){
+  if(((unsigned char*)st->stack_top + sizeof(ERL_NIF_TERM) * sz) > (st->cur)){
+    grow_stack(st);
+  }
+  st->stack_top += sz;
 }
 
 static inline ERL_NIF_TERM
@@ -92,10 +102,10 @@ parse_array(State* st){
 	return term;
       }else{
 	st->error = st->priv->am_esyntax;
-	return 0;
+	return (ERL_NIF_TERM)0;
       }
     }else{
-      return 0;
+      return (ERL_NIF_TERM)0;
     }
   }
   return enif_make_atom(st->env, "array");
@@ -139,7 +149,7 @@ parse_object(State* st){
     if(!st->error){
       st->error = st->priv->am_esyntax;
     }
-    return 0;
+    return (ERL_NIF_TERM)0;
   }
  ret:
   if(st->format == st->priv->am_struct){
@@ -150,6 +160,99 @@ parse_object(State* st){
     return plist;
   }
   assert(0);
+}
+
+static inline ERL_NIF_TERM
+parse_object_to_record(State* st){
+  ERL_NIF_TERM record;
+  ERL_NIF_TERM key, val;
+  ERL_NIF_TERM *pairs;
+  unsigned char c;
+  unsigned record_num, arity;
+  int i,k;
+  size_t results_off;
+  size_t stack_off =  st->stack_top - st->stack_down;
+  ERL_NIF_TERM* ukeys =   ukeys_base(st->resource);
+  unsigned* keys =         keys_base(st->resource, st->resource->ukeys_cnt);
+  DecRecord* records =  records_base(st->resource, st->resource->ukeys_cnt, st->resource->keys_cnt);
+  long  *masks_base =  bit_mask_base(st->resource, st->resource->ukeys_cnt, st->resource->keys_cnt, st->resource->records_cnt);
+  size_t mask_size = BITS_TO_ETERM(st->resource->ukeys_cnt);
+  size_t mask_off = stack_off;
+  size_t pairs_off = stack_off + mask_size;
+  unsigned pair_cnt = 0;
+  reserve_stack(st, mask_size); // for mask
+  for(i = 0; i < mask_size; i++){
+    (st->stack_down + mask_off)[i] = 0;
+  }
+  st->cur++;
+  if(look_ah(st) == '}'){
+    st->cur++;
+    goto ret;
+  }
+  for(;;){
+    if(look_ah(st) == '"'){
+      if((key = parse_string_as_existing_atom(st))){
+	//FIXME search in sorted array
+	int key_num = -1;
+	for(i = 0; i < st->resource->ukeys_cnt; i++){
+	  if(enif_is_identical(ukeys[i], key)){
+	    key_num = i;
+	    break;
+	  }
+	}
+	if(key_num == -1){
+	  st->error = st->priv->am_undefined_record;
+	  return (ERL_NIF_TERM)0;
+	}
+	set_bit(key_num, (long*)st->stack_down + mask_off);
+	push_term(st, key);
+	if(look_ah(st) == ':'){
+	  st->cur++;
+	  if((val = parse_json(st))){
+	    push_term(st, val);
+	    pair_cnt++;
+	    c = look_ah(st);
+	    st->cur++;
+	    if(c == ','){
+	      continue;
+	    }else if(c == '}'){
+	      goto ret;
+	    }
+	  }
+	}
+      }
+    }
+    if(!st->error)
+      st->error = st->priv->am_esyntax;
+    return (ERL_NIF_TERM)0;
+  }
+ ret:
+  record_num = find_mask(st->resource->ukeys_cnt, (long *)(st->stack_down + mask_off),
+			 st->resource->records_cnt, masks_base);
+  if(record_num < 0){
+    st->error = st->priv->am_undefined_record;
+    return (ERL_NIF_TERM)0;
+  }
+  results_off =  st->stack_top - st->stack_down;
+  push_term(st, records[record_num].tag);
+  unsigned pos = records[record_num].keys_off;
+  arity = records[record_num].arity;
+  if(arity != pair_cnt){
+    st->error = st->priv->am_undefined_record;
+    return (ERL_NIF_TERM)0;
+  }
+  for(i = 0; i < arity; i++){
+    unsigned knum = keys[pos + i];
+    for(k = 0; k < arity; k++){
+      pairs = st->stack_down + pairs_off;
+      if(enif_is_identical(pairs[2 * k], ukeys[knum])){
+	push_term(st, pairs[2 * k + 1]);
+      }
+    }
+  }
+  record = enif_make_tuple_from_array(st->env, st->stack_down + results_off, arity + 1);
+  st->stack_top =  st->stack_down + stack_off;
+  return record;
 }
 
 static inline ERL_NIF_TERM
@@ -172,7 +275,34 @@ parse_string(State* st){
     }
   }
   st->error = st->priv->am_estr;
-  return 0;
+  return (ERL_NIF_TERM)0;
+}
+static inline ERL_NIF_TERM
+parse_string_as_existing_atom(State* st){
+  unsigned char *endptr;
+  unsigned char *endstr;
+  ERL_NIF_TERM atom;
+  if(check_noescaped_jstr(st->cur, &endptr)){
+    if(*endptr == '"'){
+      if(!enif_make_existing_atom_len(st->env, (const char*)(st->cur + 1), endptr - st->cur - 1,  &atom, ERL_NIF_LATIN1)){
+	  st->error = st->priv->am_undefined_record;
+	  return (ERL_NIF_TERM)0;
+	}
+      st->cur = endptr + 1;
+      return atom;
+    }else if(*endptr == '\\'){
+      if(check_with_unescape_jstr(endptr, &endstr, &endptr)){
+	if(!enif_make_existing_atom_len(st->env, (const char*)(st->cur + 1), endstr - st->cur - 1,  &atom, ERL_NIF_LATIN1)){
+	  st->error = st->priv->am_undefined_record;
+	  return (ERL_NIF_TERM)0;
+	}
+	st->cur = endptr + 1;
+	return atom;
+      }
+    }
+  }
+  st->error = st->priv->am_estr;
+  return (ERL_NIF_TERM)0;
 }
 
 static inline ERL_NIF_TERM
@@ -184,10 +314,10 @@ parse_number(State *st){
 
   int_num = strtoll((char *)st->cur, &endptr, 10);
   if((char*)st->cur == endptr){
-    return 0;
+    return (ERL_NIF_TERM)0;
   }else if(errno == ERANGE){
     st->error = st->priv->am_erange;
-    return 0;
+    return (ERL_NIF_TERM)0;
   }
 
   if(*endptr == '.' || *endptr == 'e' || *endptr == 'E'){
@@ -198,7 +328,7 @@ parse_number(State *st){
      }
     else{
       st->error = st->priv->am_erange;
-      return 0;
+      return (ERL_NIF_TERM)0;
     }
   }
   else{
@@ -214,7 +344,7 @@ parse_true(State* st){
     return st->priv->am_true;
   }
   st->error = st->priv->am_esyntax;
-  return 0;
+  return (ERL_NIF_TERM)0;
 }
 
 static inline ERL_NIF_TERM
@@ -224,7 +354,7 @@ parse_false(State* st){
     return st->priv->am_false;
   }
   st->error = st->priv->am_esyntax;
-  return 0;
+  return (ERL_NIF_TERM)0;
 }
 
 static inline ERL_NIF_TERM
@@ -234,7 +364,7 @@ parse_null(State* st){
     return st->priv->am_null;
   }
   st->error = st->priv->am_esyntax;
-  return 0;
+  return (ERL_NIF_TERM)0;
 }
 
 static inline ERL_NIF_TERM
@@ -242,7 +372,7 @@ parse_json(State *st){
   ERL_NIF_TERM num;
   switch(look_ah(st)){
   case '\"' : return parse_string(st);
-  case '{'  : return parse_object(st);
+  case '{'  : return (st->resource ? parse_object_to_record(st) : parse_object(st));
   case '['  : return parse_array(st);
   case 't'  : return parse_true(st);
   case 'f'  : return parse_false(st);
@@ -254,7 +384,7 @@ parse_json(State *st){
     if(!st->error){
       st->error = st->priv->am_esyntax;
     }
-    return 0;
+    return (ERL_NIF_TERM)0;
   }
 }
 
@@ -264,22 +394,24 @@ decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   if(!enif_inspect_binary(env, argv[0], &input)){
     return enif_make_badarg(env);
   }
-
+  assert(argc > 1 && argc <= 3 );
   State st;
+  st.priv = (PrivData*)enif_priv_data(env);
+  st.resource = NULL;
+  if (argc == 3){
+    DecEntry *dec_entry;
+    assert(enif_get_resource(env, argv[2], st.priv->decoder_RSTYPE, (void**)&dec_entry));
+    st.resource = dec_entry;
+  }
   st.offset = JS_OFFSET;
   st.buf_size = st.offset + input.size + 4;
   st.buf = enif_alloc(st.buf_size);
   st.env = env;
   st.input = argv[0];
-  st.priv = (PrivData*)enif_priv_data(env);
-  if(argc == 2){
-    st.format = argv[1];
-  }else{
-    st.format = st.priv->am_eep18;
-  }
+  st.format = argv[1];
   st.stack_top = st.stack_down = (ERL_NIF_TERM*)st.buf;
   st.cur = st.buf + st.offset;
-  st.error = 0;
+  st.error = (ERL_NIF_TERM)0;
   memcpy(st.cur, input.data, input.size);
   st.buf[st.buf_size - 1] = 0U;
   st.buf[st.buf_size - 2] = 0U;

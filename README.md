@@ -26,22 +26,28 @@ decoder() ->
                    {person2,  record_info(fields, person2)} ]).
 ```
 
-~~~~~
+```erlang
 1> c(examples).
 {ok,examples}
+
 2> rr(examples).
 [person,person2]
-3>  E = examples:encoder().
-#Fun<jsonx.0.65737729>
-4>  D = examples:decoder().
-#Fun<jsonx.1.114288737>
-5> R = #person{name = <<"Vasya">>, age = 16}.
+
+3> Encoder = examples:encoder().
+#Fun<jsonx.0.45888425>
+
+4> Decoder = examples:decoder().
+#Fun<jsonx.1.21317315>
+
+5> Record = #person{name = <<"Vasya">>, age = 16}.
 #person{name = <<"Vasya">>,age = 16}
-6> J = E(R).
+
+6> Json = Encoder(Record).
 <<"{\"name\": \"Vasya\",\"age\": 16}">>
-7> D (J).   
+
+7> Decoder(Json).
 #person{name = <<"Vasya">>,age = 16}
-~~~~~
+```
 
 
 Decode (JSON -> Erlang)

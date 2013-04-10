@@ -1,7 +1,7 @@
 -module(examples).
 -compile(export_all).
 
--record(person, {name, age}).
+-record(person,  {name, age, friends}).
 -record(person2, {name, age, phone}).
 
 encoder() ->

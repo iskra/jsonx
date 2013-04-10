@@ -14,7 +14,7 @@ JSONX can encode and decode Erlang records!
 -module(examples).
 -compile(export_all).
 
--record(person, {name, age}).
+-record(person,  {name, age, friends}).
 -record(person2, {name, age, phone}).
 
 encoder() ->
@@ -30,53 +30,67 @@ decoder() ->
 1> c(examples).
 {ok,examples}
 
-2> rr(examples).
+2>  rr(examples).
 [person,person2]
 
-3> Encoder = examples:encoder().
+3> BabaYaga = #person2{name = <<"BabaYaga">>, age = 118, phone = <<"666-66-66">>}.
+#person2{name = <<"BabaYaga">>,age = 118,
+         phone = <<"666-66-66">>}
+
+4>  Vasya = #person{name = <<"Vasya">>, age = 18, friends = [BabaYaga]}.
+#person{name = <<"Vasya">>,age = 18,
+        friends = [#person2{name = <<"BabaYaga">>,age = 118,
+                            phone = <<"666-66-66">>}]}
+
+5> Encoder = examples:encoder().
 #Fun<jsonx.0.45888425>
 
-4> Decoder = examples:decoder().
+6> Decoder = examples:decoder().
 #Fun<jsonx.1.21317315>
 
-5> Record = #person{name = <<"Vasya">>, age = 16}.
-#person{name = <<"Vasya">>,age = 16}
+7> Json = Encoder(BabaYaga).
+<<"{\"name\": \"BabaYaga\",\"age\": 118,\"phone\": \"666-66-66\"}">>
 
-6> Json = Encoder(Record).
-<<"{\"name\": \"Vasya\",\"age\": 16}">>
+8> Decoder(Json).
+#person2{name = <<"BabaYaga">>,age = 118,
+         phone = <<"666-66-66">>}
+9> Json2 = Encoder(Vasya).
+<<"{\"name\": \"Vasya\",\"age\": 18,\"friends\": [{\"name\": \"BabaYaga\",\"age\": 118,\"phone\": \"666-66-66\"}]}">>
 
-7> Decoder(Json).
-#person{name = <<"Vasya">>,age = 16}
+10> Decoder(Json2).
+#person{name = <<"Vasya">>,age = 18,
+        friends = [#person2{name = <<"BabaYaga">>,age = 118,
+                            phone = <<"666-66-66">>}]}
 ```
 
 
 Decode (JSON -> Erlang)
 ----------------------
 
-    null             -> null
-    true             -> true
-    false            -> false
-    "string"         -> <<"binary">>
-    [1, 2.3, []]     -> [1, 2.3, []]
-    {"this": "json"} -> {[{<<"this">>: <<"json">>}]}         %% default eep18
-    {"this": "json"} -> [{<<"this">>: <<"json">>}]           %% optional proplist
-    {"this": "json"} -> {struct, [{<<"this">>: <<"json">>}]} %% optional struct
-    JSONObject       -> #rec{...}                            %% decoder must be predefined
+    null             :-> null
+    true             :-> true
+    false            :-> false
+    "string"         :-> <<"binary">>
+    [1, 2.3, []]     :-> [1, 2.3, []]
+    {"this": "json"} :-> {[{<<"this">>: <<"json">>}]}         %% default eep18
+    {"this": "json"} :-> [{<<"this">>: <<"json">>}]           %% optional proplist
+    {"this": "json"} :-> {struct, [{<<"this">>: <<"json">>}]} %% optional struct
+    JSONObject       :-> #rec{...}                            %% decoder must be predefined
 
 Encode (Erlang -> JSON)
 -----------------------
 
-    null                                 -> null
-    true                                 -> true
-    false                                -> false
-    atom                                 -> "atom"
-    <<"str">>                            -> "str"
-    [1, 2.99]                            -> [1, 2.99]
-    {struct, [{<<"this">>: <<"json">>}]} -> {"this": "json"}
-    [{<<"this">>: <<"json">>}]           -> {"this": "json"}
-    {[{<<"this">>: <<"json">>}]}         -> {"this": "json"}
-    {json, IOList}                       -> `iolist_to_binary(IOList)`  %% include with no validation
-    #rec{...}                            -> JSONObject                  %% encoder must be predefined
+    null                                 :-> null
+    true                                 :-> true
+    false                                :-> false
+    atom                                 :-> "atom"
+    <<"str">>                            :-> "str"
+    [1, 2.99]                            :-> [1, 2.99]
+    {struct, [{<<"this">>: <<"json">>}]} :-> {"this": "json"}
+    [{<<"this">>: <<"json">>}]           :-> {"this": "json"}
+    {[{<<"this">>: <<"json">>}]}         :-> {"this": "json"}
+    {json, IOList}                       :-> `iolist_to_binary(IOList)`  %% include with no validation
+    #rec{...}                            :-> JSONObject                  %% encoder must be predefined
 
 INSTALL and DOCUMENTATION
 -------------------------

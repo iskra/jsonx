@@ -164,7 +164,7 @@ match_double(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   if(!enif_get_double(env, term, &dp))
     return 0;
   b_reserve(24, st);
-  n = sprintf((char *)st->cur, "%g", dp);
+  n = sprintf((char *)st->cur, "%.15g", dp);
   b_seek(n, st);
   return 1;  
 }

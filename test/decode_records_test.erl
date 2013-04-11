@@ -19,5 +19,13 @@ decrec1_test() ->
     JTerm = {r4, {r1, [{r1, {r0}}]}, 413, {r2, 21, {r2, 211, 212}}, 414},
     Json  = E(JTerm),
     JTerm = D(Json).
+
+%% Test nonstrict decoder
+decrec2_test() ->
+    ND = jsonx:nonstrict_decoder([{r0,record_info(fields, r0)}, {r1,record_info(fields, r1)}, {r2, record_info(fields,r2)}, {r4,record_info(fields, r4)}], [{format, eep18}]),
+    E = jsonx:encoder([{r0,record_info(fields, r0)}, {r1,record_info(fields, r1)}, {r2, record_info(fields,r2)}, {r4,record_info(fields, r4)}]),
+    JTerm = [{r4, 1, 2, 3, 4}, [{record, undefined}, {strict, false}]],
+    Json  = E(JTerm),
+    Json = E(ND(Json)).
     
     

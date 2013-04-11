@@ -23,7 +23,11 @@ encoder() ->
 
 decoder() ->
     jsonx:decoder([{person,   record_info(fields, person)},
-                   {person2,  record_info(fields, person2)} ]).
+                   {person2,  record_info(fields, person2)}]).
+
+nstrict_decoder() ->
+    jsonx:nonstrict_decoder([{person,   record_info(fields, person)},
+                   {person2,  record_info(fields, person2)}], [{format, struct}]).
 ```
 
 ```erlang
@@ -61,6 +65,23 @@ decoder() ->
 #person{name = <<"Vasya">>,age = 18,
         friends = [#person2{name = <<"BabaYaga">>,age = 118,
                             phone = <<"666-66-66">>}]}
+
+11> Json3 = <<"[{\"name\": \"BabaYaga\",\"age\": 118,\"phone\": \"666-66-66\"}, {\"record\": \"undefined\", \"strict\": false}]">>.
+<<"[{\"name\": \"BabaYaga\",\"age\": 118,\"phone\": \"666-66-66\"}, {\"record\": \"undefined\", \"strict\": false}]">>
+
+12> Decoder(Json3).
+{error,undefined_record,64}
+
+13>  NSDecoder = examples:nstrict_decoder().
+#Fun<jsonx.2.71844966>
+
+14> JTerm =  NSDecoder(Json3).
+[#person2{name = <<"BabaYaga">>,age = 118,
+          phone = <<"666-66-66">>},
+ [{<<"record">>,<<"undefined">>},{<<"strict">>,false}]]
+
+15> Encoder(JTerm).
+<<"[{\"name\": \"BabaYaga\",\"age\": 118,\"phone\": \"666-66-66\"},{\"record\":\"undefined\",\"strict\":false}]">>
 ```
 
 

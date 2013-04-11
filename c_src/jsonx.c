@@ -200,7 +200,7 @@ nif_funcs[] = {
   {"encode",     1, encode_nif},
   {"encode_res", 2, encode_nif}, // with resource
   {"decode_opt", 2, decode_nif}, // with options
-  {"decode_res", 3, decode_nif}, // with options and resource
+  {"decode_res", 4, decode_nif}, // with options, resource and strict flag
   {"make_encoder_resource", 6, make_encoder_resource_nif},
   {"make_decoder_resource", 6, make_decoder_resource_nif}
 };

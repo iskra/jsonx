@@ -30,7 +30,7 @@
 %%      </ul>
 
 -module(jsonx).
--export([encode/1, decode/1, decode/2, encoder/1, decoder/1]).
+-export([encode/1, decode/1, decode/2, encoder/1, decoder/1, nonstrict_decoder/2]).
 -on_load(init/0).
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
@@ -81,17 +81,20 @@ encoder(Records_desc) ->
       RECORDS_DESC :: [{tag, [names]}],
       DECODER      :: function().
 decoder(Records_desc) ->
-    %% _ = decode_res(1,2,3 ),
-    %% _Opt = parse_opt(Options),
     {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
     Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
-    %% {
-    %%   Opt,
-    %%   Resource
-    %%  {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3}
-    %% }.
-     fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, Resource) end.
+     fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, Resource, true) end.
 	    
+%%@doc Build JSON decoder with output undefined objects.
+-spec nonstrict_decoder(RECORDS_DESC, OPTIONS) -> DECODER when
+      RECORDS_DESC :: [{tag, [names]}],
+      OPTIONS      :: [{format, struct|eep18|proplist}],
+      DECODER      :: function().
+nonstrict_decoder(Records_desc, Options) ->
+    {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
+    Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
+    Opt = parse_opt(Options),
+    fun(JSON_TERM) -> decode_res(JSON_TERM, Opt, Resource, false) end.
 
 %% Private, call NIF
 
@@ -101,7 +104,7 @@ decode_opt(_JSON, _OPTIONS) ->
 encode_res(_JSON_TERM, _RESOURCE) ->
     not_loaded(?LINE).
 
-decode_res(_JSON_TERM, _OPTION, _RESOURCE) ->
+decode_res(_JSON_TERM, _FORMAT, _RESOURCE, _STRICT_FLAG) ->
     not_loaded(?LINE).
 
 make_encoder_resource(_Rcnt, _Fcnt, _Records, _Fields, _Binsz, _Bin) ->

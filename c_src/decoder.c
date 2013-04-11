@@ -22,6 +22,7 @@ typedef struct{
   ERL_NIF_TERM  *stack_top;
   ERL_NIF_TERM  *stack_down;
   DecEntry      *resource;
+  int           strict_flag;
 } State;
 
 static inline ERL_NIF_TERM parse_json(State* st);
@@ -172,8 +173,9 @@ parse_object_to_record(State* st){
   int i,k;
   size_t results_off;
   size_t stack_off =  st->stack_top - st->stack_down;
-  ERL_NIF_TERM* ukeys =   ukeys_base(st->resource);
-  unsigned* keys =         keys_base(st->resource, st->resource->ukeys_cnt);
+  size_t cur_off =  st->cur - st->buf;
+  ERL_NIF_TERM* ukeys =  ukeys_base(st->resource);
+  unsigned* keys = keys_base(st->resource, st->resource->ukeys_cnt);
   DecRecord* records =  records_base(st->resource, st->resource->ukeys_cnt, st->resource->keys_cnt);
   long  *masks_base =  bit_mask_base(st->resource, st->resource->ukeys_cnt, st->resource->keys_cnt, st->resource->records_cnt);
   size_t mask_size = BITS_TO_ETERM(st->resource->ukeys_cnt);
@@ -200,10 +202,8 @@ parse_object_to_record(State* st){
 	    break;
 	  }
 	}
-	if(key_num == -1){
-	  st->error = st->priv->am_undefined_record;
-	  return (ERL_NIF_TERM)0;
-	}
+	if(key_num == -1)
+	  goto undefrec;
 	set_bit(key_num, (long*)st->stack_down + mask_off);
 	push_term(st, key);
 	if(look_ah(st) == ':'){
@@ -220,6 +220,12 @@ parse_object_to_record(State* st){
 	    }
 	  }
 	}
+      }else{
+	if(st->error){
+	  return (ERL_NIF_TERM)0;
+	}else{
+	  goto undefrec;
+	}
       }
     }
     if(!st->error)
@@ -229,18 +235,14 @@ parse_object_to_record(State* st){
  ret:
   record_num = find_mask(st->resource->ukeys_cnt, (long *)(st->stack_down + mask_off),
 			 st->resource->records_cnt, masks_base);
-  if(record_num < 0){
-    st->error = st->priv->am_undefined_record;
-    return (ERL_NIF_TERM)0;
-  }
+  if(record_num < 0)
+    goto undefrec;
   results_off =  st->stack_top - st->stack_down;
   push_term(st, records[record_num].tag);
   unsigned pos = records[record_num].keys_off;
   arity = records[record_num].arity;
-  if(arity != pair_cnt){
-    st->error = st->priv->am_undefined_record;
-    return (ERL_NIF_TERM)0;
-  }
+  if(arity != pair_cnt)
+    goto undefrec;
   for(i = 0; i < arity; i++){
     unsigned knum = keys[pos + i];
     for(k = 0; k < arity; k++){
@@ -253,6 +255,15 @@ parse_object_to_record(State* st){
   record = enif_make_tuple_from_array(st->env, st->stack_down + results_off, arity + 1);
   st->stack_top =  st->stack_down + stack_off;
   return record;
+ undefrec:
+  if(st->strict_flag){
+  st->error = st->priv->am_undefined_record;
+  return (ERL_NIF_TERM)0;
+  }else{
+    st->cur =  st->buf + cur_off;
+    st->stack_top =  st->stack_down + stack_off;
+    return parse_object(st);
+  }
 }
 
 static inline ERL_NIF_TERM
@@ -285,7 +296,6 @@ parse_string_as_existing_atom(State* st){
   if(check_noescaped_jstr(st->cur, &endptr)){
     if(*endptr == '"'){
       if(!enif_make_existing_atom_len(st->env, (const char*)(st->cur + 1), endptr - st->cur - 1,  &atom, ERL_NIF_LATIN1)){
-	  st->error = st->priv->am_undefined_record;
 	  return (ERL_NIF_TERM)0;
 	}
       st->cur = endptr + 1;
@@ -293,7 +303,6 @@ parse_string_as_existing_atom(State* st){
     }else if(*endptr == '\\'){
       if(check_with_unescape_jstr(endptr, &endstr, &endptr)){
 	if(!enif_make_existing_atom_len(st->env, (const char*)(st->cur + 1), endstr - st->cur - 1,  &atom, ERL_NIF_LATIN1)){
-	  st->error = st->priv->am_undefined_record;
 	  return (ERL_NIF_TERM)0;
 	}
 	st->cur = endptr + 1;
@@ -394,21 +403,20 @@ decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   if(!enif_inspect_binary(env, argv[0], &input)){
     return enif_make_badarg(env);
   }
-  assert(argc > 1 && argc <= 3 );
+  assert(argc == 2 || argc == 4 );
   State st;
   st.priv = (PrivData*)enif_priv_data(env);
   st.resource = NULL;
-  if (argc == 3){
-    DecEntry *dec_entry;
-    assert(enif_get_resource(env, argv[2], st.priv->decoder_RSTYPE, (void**)&dec_entry));
-    st.resource = dec_entry;
+  st.input = argv[0];
+  st.format = argv[1];
+  if (argc == 4){ // whith resource
+    assert(enif_get_resource(env, argv[2], st.priv->decoder_RSTYPE, (void**)&st.resource));
+    st.strict_flag = enif_is_identical(st.priv->am_true, argv[3]) ? 1 : 0;
   }
   st.offset = JS_OFFSET;
   st.buf_size = st.offset + input.size + 4;
   st.buf = enif_alloc(st.buf_size);
   st.env = env;
-  st.input = argv[0];
-  st.format = argv[1];
   st.stack_top = st.stack_down = (ERL_NIF_TERM*)st.buf;
   st.cur = st.buf + st.offset;
   st.error = (ERL_NIF_TERM)0;

@@ -1,11 +1,11 @@
 
-JSONX is an Erlang library for efficient decode and encode JSON, implemented in Erlang NIFs.
-Works with binaries as strings, arrays as lists and it only knows how to decode UTF-8 (and ASCII).
+JSONX is an Erlang library for efficient JSON decoding and encoding, implemented in Erlang NIFs.
+Works with binaries as strings, arrays as lists and only knows how to decode UTF-8 (and ASCII).
 
-JSONX VERY FAST!
-----------------
+JSONX IS VERY FAST!
+------------------
 
-See benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test) and tests encode records in `/benchmarks/test_encode_records.erl`
+Check out a benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test) and record encoding tests in `/benchmarks/test_encode_records.erl`
 
 JSONX can encode and decode Erlang records!
 -------------------------------------------
@@ -113,16 +113,16 @@ Encode (Erlang -> JSON)
     {json, IOList}                       :-> `iolist_to_binary(IOList)`  %% include with no validation
     #rec{...}                            :-> JSONObject                  %% encoder must be predefined
 
-INSTALL and DOCUMENTATION
--------------------------
+INSTALLATION and DOCUMENTATION
+------------------------------
 
 * cd jsonx
 * make
 * make doc
 * firefox doc/index.html&
 
-Examples encode json
---------------------
+Examples encoding JSON
+----------------------
 
 ~~~~~
 1>  jsonx:encode([1, 2.3, true, false, null, atom, <<"string">>, []]).
@@ -141,8 +141,8 @@ Examples encode json
 <<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>
 ~~~~~
 
-Examples decode json
---------------------
+Examples decoding JSON
+----------------------
 
 ~~~~~
 1> jsonx:decode(<<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>).

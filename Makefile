@@ -2,7 +2,7 @@ REBAR = rebar
 
 .PHONY: all xref erl test clean doc
 
-all: erl xref test
+all: clean erl xref test
 
 erl:
 	$(REBAR) compile
@@ -11,8 +11,6 @@ xref:
 	$(REBAR) xref
 
 test:
-	@mkdir -p .eunit
-	@-rm -rf .eunit
 	$(REBAR) eunit
 
 clean:

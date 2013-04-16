@@ -206,7 +206,7 @@ init() ->
             filename:join(Dir, ?LIBNAME)
     end,
     erlang:load_nif(So, [[json, struct, proplist, eep18, no_match], [true, false, null],
-			 [error, big_num, invalid_string, invalid_json, trailing_data]]).
+			 [error, big_num, invalid_string, invalid_json, trailing_data, undefined_record]]).
 
 not_loaded(Line) ->
     exit({not_loaded, [{module, ?MODULE}, {line, Line}]}).

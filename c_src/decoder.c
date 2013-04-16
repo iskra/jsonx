@@ -169,8 +169,8 @@ parse_object_to_record(State* st){
   ERL_NIF_TERM key, val;
   ERL_NIF_TERM *pairs;
   unsigned char c;
-  unsigned record_num, arity;
-  int i,k;
+  unsigned arity;
+  int  record_num,i,k;
   size_t results_off;
   size_t stack_off =  st->stack_top - st->stack_down;
   size_t cur_off =  st->cur - st->buf;
@@ -257,8 +257,8 @@ parse_object_to_record(State* st){
   return record;
  undefrec:
   if(st->strict_flag){
-  st->error = st->priv->am_undefined_record;
-  return (ERL_NIF_TERM)0;
+    st->error = st->priv->am_undefined_record;
+    return (ERL_NIF_TERM)0;
   }else{
     st->cur =  st->buf + cur_off;
     st->stack_top =  st->stack_down + stack_off;

@@ -18,16 +18,17 @@ JSONX can encode and decode Erlang records!
 -record(person2, {name, age, phone}).
 
 encoder() ->
-    jsonx:encoder([{person,   record_info(fields, person)},
+    jsonx:encoder1([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)} ]).
 
 decoder() ->
-    jsonx:decoder([{person,   record_info(fields, person)},
+    jsonx:decoder1([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)}]).
 
-nstrict_decoder() ->
-    jsonx:nonstrict_decoder([{person,   record_info(fields, person)},
-                   {person2,  record_info(fields, person2)}], [{format, struct}]).
+nonstrict_decoder1() ->
+    jsonx:decoder([{person,   record_info(fields, person)},
+                   {person2,  record_info(fields, person2)}],
+		  [{format, struct}]).
 ```
 
 ```erlang
@@ -46,10 +47,10 @@ nstrict_decoder() ->
         friends = [#person2{name = <<"BabaYaga">>,age = 118,
                             phone = <<"666-66-66">>}]}
 
-5> Encoder = examples:encoder().
+5> Encoder = examples:encoder1().
 #Fun<jsonx.0.45888425>
 
-6> Decoder = examples:decoder().
+6> Decoder = examples:decoder1().
 #Fun<jsonx.1.21317315>
 
 7> Json = Encoder(BabaYaga).
@@ -72,10 +73,10 @@ nstrict_decoder() ->
 12> Decoder(Json3).
 {error,undefined_record,64}
 
-13>  NSDecoder = examples:nstrict_decoder().
+13>  NonStrictDecoder = examples:nonstrict_decoder1().
 #Fun<jsonx.2.71844966>
 
-14> JTerm =  NSDecoder(Json3).
+14> JTerm =  NonStrictDecoder(Json3).
 [#person2{name = <<"BabaYaga">>,age = 118,
           phone = <<"666-66-66">>},
  [{<<"record">>,<<"undefined">>},{<<"strict">>,false}]]

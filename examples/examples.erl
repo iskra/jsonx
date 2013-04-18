@@ -4,14 +4,14 @@
 -record(person,  {name, age, friends}).
 -record(person2, {name, age, phone}).
 
-encoder() ->
+encoder1() ->
     jsonx:encoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)} ]).
 
-decoder() ->
+decoder1() ->
     jsonx:decoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)}]).
 
-nstrict_decoder() ->
-    jsonx:nonstrict_decoder([{person,   record_info(fields, person)},
+nonstrict_decoder1() ->
+    jsonx:decoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)}], [{format, proplist}]).

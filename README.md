@@ -28,7 +28,7 @@ decoder() ->
 nonstrict_decoder1() ->
     jsonx:decoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)}],
-		  [{format, struct}]).
+		  [{format, proplist}]).
 ```
 
 ```erlang

@@ -22,7 +22,7 @@ decrec1_test() ->
 
 %% Test nonstrict decoder
 decrec2_test() ->
-    ND = jsonx:nonstrict_decoder([{r0,record_info(fields, r0)}, {r1,record_info(fields, r1)}, {r2, record_info(fields,r2)}, {r4,record_info(fields, r4)}], [{format, eep18}]),
+    ND = jsonx:decoder([{r0,record_info(fields, r0)}, {r1,record_info(fields, r1)}, {r2, record_info(fields,r2)}, {r4,record_info(fields, r4)}], [{format, eep18}]),
     E = jsonx:encoder([{r0,record_info(fields, r0)}, {r1,record_info(fields, r1)}, {r2, record_info(fields,r2)}, {r4,record_info(fields, r4)}]),
     JTerm = [{r4, 1, 2, 3, 4}, [{record, undefined}, {strict, false}]],
     Json  = E(JTerm),

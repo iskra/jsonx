@@ -197,7 +197,7 @@ make_decoder_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
 
 static ErlNifFunc
 nif_funcs[] = {
-  {"encode",     1, encode_nif},
+  {"encode1",     1, encode_nif},
   {"encode_res", 2, encode_nif}, // with resource
   {"decode_opt", 2, decode_nif}, // with options
   {"decode_res", 4, decode_nif}, // with options, resource and strict flag

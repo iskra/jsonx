@@ -30,18 +30,34 @@
 %%      </ul>
 
 -module(jsonx).
--export([encode/1, decode/1, decode/2, encoder/1, decoder/1, nonstrict_decoder/2]).
+-export([encode/1, decode/1, decode/2, encoder/1, decoder/1, decoder/2]).
 -on_load(init/0).
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
+
+%% =================
+%% API Encoding JSON
+%% =================
 
 %%@doc Encode JSON.
 -spec encode(JSON_TERM) -> JSON when
       JSON      :: binary(),
       JSON_TERM :: any().
-encode(_) ->
-    not_loaded(?LINE).
+encode(JSON_TERM)->
+    encode1(JSON_TERM).
 
+%%@doc Build a JSON encoder.
+-spec encoder(RECORDS_DESC) -> ENCODER when
+      RECORDS_DESC :: [{tag, [names]}],
+      ENCODER      :: function().
+encoder(Records_desc) ->
+    {Rcnt, Fcnt, Binsz, Records, Fields, Bin} = prepare_enc_desc(Records_desc),
+    Resource = make_encoder_resource(Rcnt, Fcnt, Records, Fields, Binsz, Bin),
+    fun(JSON_TERM) -> encode_res(JSON_TERM, Resource) end.
+
+%% ==================
+%% API Decoding JSON
+%% ==================
 
 %%@doc Decode JSON to Erlang term.
 -spec decode(JSON) -> JSON_TERM when
@@ -56,27 +72,12 @@ decode(JSON) ->
       OPTIONS   :: [{format, struct|eep18|proplist}],
       JSON_TERM :: any().
 decode(JSON, Options) ->
-    decode_opt(JSON, parse_opt(Options)).
+    case parse_format(Options) of
+	undefined -> decode_opt(JSON, eep18);
+	F         -> decode_opt(JSON, F)
+    end.
 
-%% %% Records descriptions for encoder resource
-%% {Rcnt                                  %% Records count
-%%  ,Fcnt                                 %% Counter all fields in records
-%%  ,Records = [{Tag, Fields_off, Arity}] %% List of records tag, position and length fields
-%%  ,Fields  = [{Name_off, Size}]         %% List of position and size fields names in binary storage
-%%  ,Binsz                                %% Binary data size
-%%  ,Bin                                  %% Binary storage for names of fields, format - <,"name": >
-%% }
-
-%%@doc Build JSON encoder.
--spec encoder(RECORDS_DESC) -> ENCODER when
-      RECORDS_DESC :: [{tag, [names]}],
-      ENCODER      :: function().
-encoder(Records_desc) ->
-    {Rcnt, Fcnt, Binsz, Records, Fields, Bin} = prepare_enc_desc(Records_desc),
-    Resource = make_encoder_resource(Rcnt, Fcnt, Records, Fields, Binsz, Bin),
-    fun(JSON_TERM) -> encode_res(JSON_TERM, Resource) end.
-
-%%@doc Build JSON decoder.
+%%@doc Build a JSON decoder.
 -spec decoder(RECORDS_DESC) -> DECODER when
       RECORDS_DESC :: [{tag, [names]}],
       DECODER      :: function().
@@ -85,23 +86,31 @@ decoder(Records_desc) ->
     Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
      fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, Resource, true) end.
 	    
-%%@doc Build JSON decoder with output undefined objects.
--spec nonstrict_decoder(RECORDS_DESC, OPTIONS) -> DECODER when
+%%@doc Build a JSON decoder with output undefined objects.
+-spec decoder(RECORDS_DESC, OPTIONS) -> DECODER when
       RECORDS_DESC :: [{tag, [names]}],
       OPTIONS      :: [{format, struct|eep18|proplist}],
       DECODER      :: function().
-nonstrict_decoder(Records_desc, Options) ->
+decoder(Records_desc, Options) ->
     {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
     Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
-    Opt = parse_opt(Options),
-    fun(JSON_TERM) -> decode_res(JSON_TERM, Opt, Resource, false) end.
+    %%Format = parse_format(Options),
+    case parse_format(Options) of
+	undefined -> fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, Resource, false) end;
+	Format    -> fun(JSON_TERM) -> decode_res(JSON_TERM, Format, Resource, false) end
+    end.
 
-%% Private, call NIF
+%% ==========
+%% Call NIFs
+%% ==========
 
-decode_opt(_JSON, _OPTIONS) ->
+encode1(_JSON_TERM) ->
     not_loaded(?LINE).
 
 encode_res(_JSON_TERM, _RESOURCE) ->
+    not_loaded(?LINE).
+
+decode_opt(_JSON, _FORMAT) ->
     not_loaded(?LINE).
 
 decode_res(_JSON_TERM, _FORMAT, _RESOURCE, _STRICT_FLAG) ->
@@ -113,16 +122,21 @@ make_encoder_resource(_Rcnt, _Fcnt, _Records, _Fields, _Binsz, _Bin) ->
 make_decoder_resource(_RecCnt, _UKeyCnt, _KeyCnt, _UKeys, _Keys, _Records3) ->
     not_loaded(?LINE).
 
-%% Internal
+%% =================
+%% Private functions
+%% =================
 
-parse_opt([]) ->
-    eep18;
-parse_opt([{format, struct} | _]) ->
+parse_format([]) ->
+    undefined;
+parse_format([{format, struct} | _]) ->
     struct;
-parse_opt([{format, proplist} | _]) ->
+parse_format([{format, proplist} | _]) ->
     proplist;
-parse_opt([{format, eep18} | _]) ->
-    eep18.
+parse_format([{format, eep18} | _]) ->
+    eep18;
+parse_format([_H | T]) ->
+    parse_format(T).
+
 %%%% Internal for decoder
 
 prepare_for_dec(Records) ->

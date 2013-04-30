@@ -5,7 +5,17 @@ Works with binaries as strings, arrays as lists and only knows how to decode UTF
 JSONX IS VERY FAST!
 ------------------
 
-Check out a benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test) and record encoding tests in `/benchmarks/test_encode_records.erl`
+Check out a benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test) or
+[davisp/erljson_bench](https://github.com/davisp/erljson_bench) and
+record encoding tests in `/benchmarks/test_encode_records.erl`
+
+INSTALLATION and DOCUMENTATION
+------------------------------
+
+* cd jsonx
+* make
+* make doc
+* firefox doc/index.html&
 
 JSONX can encode and decode Erlang records!
 -------------------------------------------
@@ -86,46 +96,10 @@ nonstrict_decoder1() ->
 ```
 
 
-Decode (JSON -> Erlang)
-----------------------
-
-    null             :-> null
-    true             :-> true
-    false            :-> false
-    "string"         :-> <<"binary">>
-    [1, 2.3, []]     :-> [1, 2.3, []]
-    {"this": "json"} :-> {[{<<"this">>: <<"json">>}]}         %% default eep18
-    {"this": "json"} :-> [{<<"this">>: <<"json">>}]           %% optional proplist
-    {"this": "json"} :-> {struct, [{<<"this">>: <<"json">>}]} %% optional struct
-    JSONObject       :-> #rec{...}                            %% decoder must be predefined
-
-Encode (Erlang -> JSON)
------------------------
-
-    null                                 :-> null
-    true                                 :-> true
-    false                                :-> false
-    atom                                 :-> "atom"
-    <<"str">>                            :-> "str"
-    [1, 2.99]                            :-> [1, 2.99]
-    {struct, [{<<"this">>: <<"json">>}]} :-> {"this": "json"}
-    [{<<"this">>: <<"json">>}]           :-> {"this": "json"}
-    {[{<<"this">>: <<"json">>}]}         :-> {"this": "json"}
-    {json, IOList}                       :-> `iolist_to_binary(IOList)`  %% include with no validation
-    #rec{...}                            :-> JSONObject                  %% encoder must be predefined
-
-INSTALLATION and DOCUMENTATION
-------------------------------
-
-* cd jsonx
-* make
-* make doc
-* firefox doc/index.html&
-
 Examples encoding JSON
 ----------------------
 
-~~~~~
+```erlang
 1>  jsonx:encode([1, 2.3, true, false, null, atom, <<"string">>, []]).
 <<"[1,2.3,true,false,null,\"atom\",\"string\",[]]">>
 
@@ -140,12 +114,12 @@ Examples encoding JSON
 %% Object as eep18 propsal
 4>  jsonx:encode( {[{name, <<"Ivan">>}, {age, 33}, {phones, [3332211, 4443322]}]} ).
 <<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>
-~~~~~
+```
 
 Examples decoding JSON
 ----------------------
 
-~~~~~
+```erlang
 1> jsonx:decode(<<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>).
 {[{<<"name">>,<<"Ivan">>},
   {<<"age">>,33},
@@ -165,4 +139,32 @@ Examples decoding JSON
 {struct,[{<<"name">>,<<"Ivan">>},
          {<<"age">>,33},
          {<<"phones">>,[3332211,4443322]}]}
-~~~~~
+```
+
+Mapping (JSON -> Erlang)
+----------------------
+
+    null             :-> null
+    true             :-> true
+    false            :-> false
+    "string"         :-> <<"binary">>
+    [1, 2.3, []]     :-> [1, 2.3, []]
+    {"this": "json"} :-> {[{<<"this">>: <<"json">>}]}         %% default eep18
+    {"this": "json"} :-> [{<<"this">>: <<"json">>}]           %% optional proplist
+    {"this": "json"} :-> {struct, [{<<"this">>: <<"json">>}]} %% optional struct
+    JSONObject       :-> #rec{...}                            %% decoder must be predefined
+
+Mapping (Erlang -> JSON)
+-----------------------
+
+    null                                 :-> null
+    true                                 :-> true
+    false                                :-> false
+    atom                                 :-> "atom"
+    <<"str">>                            :-> "str"
+    [1, 2.99]                            :-> [1, 2.99]
+    {struct, [{<<"this">>: <<"json">>}]} :-> {"this": "json"}
+    [{<<"this">>: <<"json">>}]           :-> {"this": "json"}
+    {[{<<"this">>: <<"json">>}]}         :-> {"this": "json"}
+    {json, IOList}                       :-> `iolist_to_binary(IOList)`  %% include with no validation
+    #rec{...}                            :-> JSONObject                  %% encoder must be predefined

@@ -7,9 +7,6 @@
 #include "erl_nif.h"
 #include "jsonx_str.h"
 
-#include <stdio.h>
-#define LOG(...)  fprintf(stderr,  __VA_ARGS__ )
-
 typedef struct{
   ERL_NIF_TERM am_true;
   ERL_NIF_TERM am_false;
@@ -203,7 +200,6 @@ parse_null(State* st){
 
 static inline ERL_NIF_TERM
 parse_key(State *st){
-  //LOG("...parse key: %s\r\n", st->cur);
   ERL_NIF_TERM key;
   switch(look_ah(st)){
   case '\"' :
@@ -213,7 +209,6 @@ parse_key(State *st){
     if(look_ah(st) == ':'){
       st->m_state =  KEY_COMPLETTE;
       st->cur++;
-      //LOG("...parse key: %s\r\n", st->cur);
       return enif_make_tuple2(st->env, st->priv->am_map_key, key);
     }
   case '\0' :
@@ -255,11 +250,8 @@ ERL_NIF_TERM
 get_event_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   State *st;
   assert(enif_get_resource(env, argv[0], stream_RSTYPE, (void**)&st));
-  //LOG("=== top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);
-  //LOG("*top %c\r\n",  *st->top);
   switch(*st->top){
   case '[' :
-    //LOG("case [ : top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);
     if(st->m_state == COMPLETTE){
       switch(look_ah(st)){
       case ',' : st->m_state = COMMA; st->cur++; return parse0(st);
@@ -277,21 +269,17 @@ get_event_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     }
     break;
   case '{' :
-    //LOG("  case { : top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);
     if(st->m_state == COMPLETTE){
-      //LOG("     COMPLETTE case { : top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);    
       switch(look_ah(st)){
       case ',' :  st->m_state = COMMA; st->cur++; return parse_key(st);
       case '}' : st->m_state = COMPLETTE; st->cur++; st->top--; return st->priv->am_end_map;
       case '\0': st->cur++; return st->priv->am_parse_buf;
       }
     }else  if(st->m_state == KEY_COMPLETTE){
-      //LOG("     KEY_COMPLETTE case { : top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);    
       return parse0(st);
     }else if(st->m_state == COMMA){
       return parse_key(st);
     }else if(st->m_state == START){
-      //LOG("     START_MAP case { : top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);    
       switch(look_ah(st)){
       case '\0': st->cur++; return st->priv->am_parse_buf;
       case '}' : st->m_state = COMPLETTE; st->cur++; st->top--; return st->priv->am_end_map;
@@ -300,7 +288,6 @@ get_event_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     } 
     break;
   case '\0':
-    //LOG("case 0: top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);
     if(st->m_state == COMPLETTE){
       ERL_NIF_TERM rest;
       look_ah(st);
@@ -314,9 +301,7 @@ get_event_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     }
     break;
   case 'e':
-    //LOG(" case e: top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);
   default :
-    //LOG("default: top: %p,top: '%s', cur: '%s' m_state: == %d\r\n", st->top, st->top, st->cur, st->m_state);
     break;
   }
   return make_error(st, st->priv->am_esyntax);
@@ -333,7 +318,6 @@ update_decoder_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   size_t stack_size = (st->top + 1 - st->bin.data);
 
   size_t free = st->bin.size - stack_size - sizeof(ERL_NIF_TERM);
-  ////LOG("--- update_decoder_nif: free: %d, input.size: %d, stack_size:%d cur: %s\r\n", free, input.size, stack_size, st->cur);
   if(input.size > free){
     enif_realloc_binary(&st->bin, input.size + stack_size + sizeof(ERL_NIF_TERM));
     st->top = st->bin.data + stack_size - 1;
@@ -345,7 +329,6 @@ update_decoder_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     memcpy(st->cur, input.data, input.size);
     *((ERL_NIF_TERM*)(st->cur + input.size)) = 0U;
   }
-  ////LOG("+++ update_decoder_nif: free: %d, input.size: %d, stack_size:%d cur: %s\r\n", free, input.size, stack_size, st->cur);
   return st->priv->am_ok; 
 }
 
@@ -371,9 +354,6 @@ make_stream_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   ERL_NIF_TERM ret = enif_make_resource(env, (void *)st);
   enif_release_resource(st);
   return ret;
-  //  error:
-  //   enif_release_resource(dec_entry);
-  //   return enif_make_badarg(env);
 }
 
 static ErlNifFunc

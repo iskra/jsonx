@@ -108,6 +108,6 @@ obj_chunks_test() ->
      parse_buf,end_map,parse_buf,end_array,end_map,{parse_end,<<>>}]
 	= jstream_test:all_events_from_blist([<<"{\"key\":">>, <<"[1234567,2345,">>, <<"{">>,<<"}">>, <<"]}">>]). 
 
-obj_chunks_ERR_test() ->
+obj_chunks_err_test() ->
     [start_map,parse_buf,{map_key,<<"k1">>},parse_buf,true,parse_buf,{error,invalid_json}]
 	=  jstream_test:all_events_from_blist([<<"{">>,<<"\"k1\":">>, <<"true ,">>, <<",\"k2\":">>,<<"false">>,<<"}">>]).

@@ -1,4 +1,4 @@
--module(examples).
+-module(records_examples).
 -compile(export_all).
 
 -record(person,  {name, age, friends}).

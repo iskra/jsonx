@@ -1,6 +1,5 @@
--module(test_encode_records).
--compile(export_all).
-
+-module(bench_encode_records).
+-export([test/0]).
 -record(person, {name, last_name, age, adress, phones, email}).
 
 data() ->

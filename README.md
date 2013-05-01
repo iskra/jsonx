@@ -7,7 +7,7 @@ JSONX IS VERY FAST!
 
 Check out a benchmark [si14/erl_json_test](https://github.com/si14/erl_json_test) or
 [davisp/erljson_bench](https://github.com/davisp/erljson_bench) and
-record encoding tests in `/benchmarks/test_encode_records.erl`
+record encoding tests in `/test/bench_encode_records.erl`
 
 INSTALLATION and DOCUMENTATION
 ------------------------------
@@ -21,7 +21,7 @@ JSONX can encode and decode Erlang records!
 -------------------------------------------
 
 ```erlang
--module(examples).
+-module(record_example).
 -compile(export_all).
 
 -record(person,  {name, age, friends}).
@@ -42,10 +42,10 @@ nonstrict_decoder1() ->
 ```
 
 ```erlang
-1> c(examples).
-{ok,examples}
+1> c(records_examples).
+{ok,records_examples}
 
-2>  rr(examples).
+2>  rr(record_examples).
 [person,person2]
 
 3> BabaYaga = #person2{name = <<"BabaYaga">>, age = 118, phone = <<"666-66-66">>}.
@@ -139,6 +139,44 @@ Examples decoding JSON
 {struct,[{<<"name">>,<<"Ivan">>},
          {<<"age">>,33},
          {<<"phones">>,[3332211,4443322]}]}
+```
+
+Example streaming parse
+-----------------------
+
+More example see `examples/stream_example.erl` .
+
+```erlang
+1> D = jstream:new_decoder(<<"{\"key1\": \"val1\",\n">>).
+<<>>
+
+2> jstream:get_event(D).
+start_map
+
+3> jstream:get_event(D).
+{map_key,<<"key1">>}
+
+4> jstream:get_event(D).
+<<"val1">>
+
+5> jstream:get_event(D).
+parse_buf
+
+6> ok = jstream:update_decoder(D, <<"\"key2\": \"val2\"}\n">>).
+ok
+
+7> jstream:get_event(D).
+{map_key,<<"key2">>}
+
+8> jstream:get_event(D).
+<<"val2">>
+
+9> jstream:get_event(D).
+end_map
+
+10> jstream:get_event(D).
+{parse_end,<<>>}
+
 ```
 
 Mapping (JSON -> Erlang)

@@ -27,12 +27,12 @@ JSONX can encode and decode Erlang records!
 -record(person,  {name, age, friends}).
 -record(person2, {name, age, phone}).
 
-encoder() ->
-    jsonx:encoder1([{person,   record_info(fields, person)},
+encoder1() ->
+    jsonx:encoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)} ]).
 
-decoder() ->
-    jsonx:decoder1([{person,   record_info(fields, person)},
+decoder1() ->
+    jsonx:decoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)}]).
 
 nonstrict_decoder1() ->
@@ -57,10 +57,10 @@ nonstrict_decoder1() ->
         friends = [#person2{name = <<"BabaYaga">>,age = 118,
                             phone = <<"666-66-66">>}]}
 
-5> Encoder = examples:encoder1().
+5> Encoder = record_examples:encoder1().
 #Fun<jsonx.0.45888425>
 
-6> Decoder = examples:decoder1().
+6> Decoder = record_examples:decoder1().
 #Fun<jsonx.1.21317315>
 
 7> Json = Encoder(BabaYaga).
@@ -83,7 +83,7 @@ nonstrict_decoder1() ->
 12> Decoder(Json3).
 {error,undefined_record,64}
 
-13>  NonStrictDecoder = examples:nonstrict_decoder1().
+13>  NonStrictDecoder = record_examples:nonstrict_decoder1().
 #Fun<jsonx.2.71844966>
 
 14> JTerm =  NonStrictDecoder(Json3).

@@ -2,6 +2,10 @@
 
 #include "erl_nif.h"
 
+#ifdef _MSC_VER
+#define inline __inline
+#endif
+
 typedef struct{
   ERL_NIF_TERM am_true;
   ERL_NIF_TERM am_false;

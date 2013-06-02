@@ -1,5 +1,9 @@
 // Copyright 2013 Yuriy Iskra <iskra.yw@gmail.com>
 
+#ifdef _MSC_VER
+#define inline __inline
+#endif
+
 //2-byte utf8 seq(110xxxxx)
 #define U2 (1<<0)
 //3-byte utf8 seq(1110xxxx)
@@ -65,7 +69,6 @@ static const unsigned char hex_tab[256] = {
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 };
-
 
 static inline int
 ucs_from_4hex(unsigned char* ptr, unsigned* hval ){

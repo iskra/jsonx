@@ -8,7 +8,7 @@ data() ->
 	    age = 116,
 	    adress = <<"ИзбаНаОкорочках, Болото, Лес, Россия">>,
 	    phones = [<<"666-66-66">>],
-	    email = baba_yaga@les.ru
+	    email = 'baba_yaga@les.ru'
 	   }.
 
 test() ->

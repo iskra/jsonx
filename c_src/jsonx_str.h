@@ -50,24 +50,27 @@ static const unsigned char js_map[] = {
      U4,  U4,  U4,  U4,  U4,  U4,  U4,  U4,    B,   B,   B,   B,   B,   B,   B,   B
 };
 
-static const unsigned char hex_tab[256] = {
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,
-    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+#define MINUS1 0xFF
+#define M1 MINUS1
 
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+static const unsigned char hex_tab[256] = {
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, M1, M1, M1, M1, M1, M1,
+    M1, 10, 11, 12, 13, 14, 15, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, 10, 11, 12, 13, 14, 15, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1
+
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
 };
 
 static inline int
@@ -75,16 +78,19 @@ ucs_from_4hex(unsigned char* ptr, unsigned* hval ){
   unsigned char h;
 
   h = hex_tab[*(ptr)];
-  if(h != -1)  *hval = h << 12; else return 0;
+  if(h != M1)  *hval = h << 12; else return 0;
   h = hex_tab[*(++ptr)];
-  if(h != -1) *hval = *hval + (h << 8); else return 0;
+  if(h != M1) *hval = *hval + (h << 8); else return 0;
   h = hex_tab[*(++ptr)];
-  if(h != -1) *hval = *hval + (h << 4); else return 0;
+  if(h != M1) *hval = *hval + (h << 4); else return 0;
   h = hex_tab[*(++ptr)];
-  if(h != -1) *hval = *hval + h; else return 0;
+  if(h != M1) *hval = *hval + h; else return 0;
 
   return 1;
 }
+
+#undef M1
+#undef MINUS1
 
 static inline unsigned char*
 ucs_to_utf8(unsigned char* ptr, unsigned ucs){

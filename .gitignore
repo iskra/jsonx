@@ -1,0 +1,6 @@
+*.o
+.eunit
+*.so
+*.beam
+ebin/*.app
+*~

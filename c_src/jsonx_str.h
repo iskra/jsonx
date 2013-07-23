@@ -61,7 +61,7 @@ static const unsigned char hex_tab[256] = {
     M1, 10, 11, 12, 13, 14, 15, M1, M1, M1, M1, M1, M1, M1, M1, M1,
     M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
     M1, 10, 11, 12, 13, 14, 15, M1, M1, M1, M1, M1, M1, M1, M1, M1,
-    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1
+    M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
 
     M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,
     M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1, M1,

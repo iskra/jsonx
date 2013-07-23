@@ -49,6 +49,8 @@ decstr1_test() ->
     <<"...">> = jsonx:decode(<<"\"...\"">>).
 decstr2_test() ->
     <<192, 128, 224, 128, 128, 240, 128, 128, 128>> = jsonx:decode(<<34,192,128,224,128,128,240,128,128,128,34>>).
+decstr3_test() ->
+    <<"/">> = jsonx:decode(<<"\"\\/\"">>).
 decstre0_test() ->
     {error,invalid_string,0} = jsonx:decode(<<34,192,34>>).
 decstre01_test() ->

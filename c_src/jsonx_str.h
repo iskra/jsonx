@@ -170,6 +170,7 @@ check_with_unescape_jstr(unsigned char *str, unsigned char **endstr, unsigned ch
       case 'f' : {src++; *dst++ = 12U; continue;}
       case 'r' : {src++; *dst++ = 13U; continue;}
       case '"' : {src++; *dst++ = 34U; continue;}
+      case '/' : {src++; *dst++ = 47U; continue;}
       case '\\': {src++; *dst++ = 92U; continue;}
       case 'u': {
 	unsigned hval;

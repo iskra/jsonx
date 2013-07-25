@@ -30,10 +30,13 @@
 %%      </ul>
 
 -module(jsonx).
--export([encode/1, decode/1, decode/2, encoder/1, decoder/1, decoder/2]).
+-export([encode/1, decode/1, decode/2,
+         encoder/1, encoder/2, decoder/1, decoder/2]).
 -on_load(init/0).
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
+
+-include_lib("eunit/include/eunit.hrl").
 
 %% =================
 %% API Encoding JSON
@@ -51,8 +54,17 @@ encode(JSON_TERM)->
       RECORDS_DESC :: [{tag, [names]}],
       ENCODER      :: function().
 encoder(Records_desc) ->
+    encoder(Records_desc, []).
+
+%%@doc Build a JSON encoder.
+-spec encoder(RECORDS_DESC, OPTIONS) -> ENCODER when
+      RECORDS_DESC :: [{tag, [names]}],
+      OPTIONS      :: [{ignore, [atom()]}],
+      ENCODER      :: function().
+encoder(Records_desc, Options) ->
     {Rcnt, Fcnt, Binsz, Records, Fields, Bin} = prepare_enc_desc(Records_desc),
-    Resource = make_encoder_resource(Rcnt, Fcnt, Records, Fields, Binsz, Bin),
+    Ignored = proplists:get_value(ignore, Options, []),
+    Resource = make_encoder_resource(Rcnt, Fcnt, Records, Fields, Binsz, Bin, Ignored),
     fun(JSON_TERM) -> encode_res(JSON_TERM, Resource) end.
 
 %% ==================
@@ -116,7 +128,7 @@ decode_opt(_JSON, _FORMAT) ->
 decode_res(_JSON_TERM, _FORMAT, _RESOURCE, _STRICT_FLAG) ->
     not_loaded(?LINE).
 
-make_encoder_resource(_Rcnt, _Fcnt, _Records, _Fields, _Binsz, _Bin) ->
+make_encoder_resource(_Rcnt, _Fcnt, _Records, _Fields, _Binsz, _Bin, _Ignored) ->
     not_loaded(?LINE).
 
 make_decoder_resource(_RecCnt, _UKeyCnt, _KeyCnt, _UKeys, _Keys, _Records3) ->

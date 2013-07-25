@@ -25,5 +25,6 @@ encrec2_test() ->
 
 encrec3_test() ->
     %%F = jsonx:encoder([ {spam, [a, b, c]} ], [{ignore,null}]),
-    F = jsonx:encoder([ {spam, [a, b, c]} ]),
-    <<"{}">> = F({spam, null, null, null}). 
+    F = jsonx:encoder([ {spam, [a, b, c]} ], [{ignore, [null, undefined]}]),
+    <<"{}">> = F({spam, null, null, null}),
+    <<"{\"a\": \"nall\"}">> = F({spam, nall, null, undefined}).

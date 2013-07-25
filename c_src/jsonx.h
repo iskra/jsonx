@@ -72,6 +72,8 @@ typedef struct{
   ErlNifBinary bin;
   unsigned records_cnt;
   unsigned fields_cnt;
+  ERL_NIF_TERM* ignored;
+  unsigned ignored_len;
 }EncEntry;
 
 static inline EncRecord*

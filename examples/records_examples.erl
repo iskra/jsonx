@@ -8,6 +8,10 @@ encoder1() ->
     jsonx:encoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)} ]).
 
+encoder1_ignore() ->
+    jsonx:encoder([{person,   record_info(fields, person)},
+                   {person2,  record_info(fields, person2)} ], [{ignore, [null]}]).
+
 decoder1() ->
     jsonx:decoder([{person,   record_info(fields, person)},
                    {person2,  record_info(fields, person2)}]).

@@ -8,6 +8,10 @@ enc_rt_dtor(ErlNifEnv* env, void* obj){
   EncEntry *entry = (EncEntry*)obj;
   enif_release_binary(&entry->bin);
   entry->bin.data = NULL;
+  if(entry->ignored){
+    enif_free(entry->ignored);
+    entry->ignored = NULL;
+  }
   entry = NULL;
 }
 
@@ -73,7 +77,7 @@ make_encoder_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   enif_get_uint(env, argv[4], &bin_sz);
   PrivData* priv = (PrivData*)enif_priv_data(env);
   unsigned resource_sz = enc_resource_size(rs_len, fs_len);
-  EncEntry *enc_entry = (EncEntry*)enif_alloc_resource(priv->encoder_RSTYPE, resource_sz); 
+  EncEntry *enc_entry = (EncEntry*)enif_alloc_resource(priv->encoder_RSTYPE, resource_sz);
   //memset(enc_entry, 0, resource_sz);
   enc_entry->records_cnt = rs_len;
   enc_entry->fields_cnt = fs_len;
@@ -101,6 +105,7 @@ make_encoder_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     i++;
     list = tail;
   }
+
   list = argv[3];
   i = 0;
   while(enif_get_list_cell(env, list, &head, &tail)){
@@ -113,6 +118,23 @@ make_encoder_resource_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
     fields[i].offset = ip;
     enif_get_uint(env, tuple[1], &ip);
     fields[i].size = ip;
+    i++;
+    list = tail;
+  }
+
+  list = argv[6];
+  if(!enif_get_list_length(env, list, &(enc_entry->ignored_len)))
+    goto error;
+  enc_entry->ignored = (ERL_NIF_TERM*)enif_alloc(enc_entry->ignored_len*sizeof(ERL_NIF_TERM));
+  i = 0;
+  while(enif_get_list_cell(env, list, &head, &tail)){
+    // ignored term should be atoms
+    if(enif_is_atom(env, head)){
+      enc_entry->ignored[i] = head;
+    }else{
+      enif_free(enc_entry->ignored);
+      goto error;
+    }
     i++;
     list = tail;
   }
@@ -201,7 +223,7 @@ nif_funcs[] = {
   {"encode_res", 2, encode_nif}, // with resource
   {"decode_opt", 2, decode_nif}, // with options
   {"decode_res", 4, decode_nif}, // with options, resource and strict flag
-  {"make_encoder_resource", 6, make_encoder_resource_nif},
+  {"make_encoder_resource", 7, make_encoder_resource_nif},
   {"make_decoder_resource", 6, make_decoder_resource_nif}
 };
 

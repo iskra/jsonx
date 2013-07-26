@@ -267,6 +267,21 @@ match_json(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
 }
 
 static inline int
+enc_should_be_ignored(ErlNifEnv* env, ERL_NIF_TERM atom, const EncEntry* entry){
+  if(!enif_is_atom(env, atom)){
+    return 0;
+  }
+  unsigned i;
+  for(i=0; i<entry->ignored_len; ++i){
+    if(enif_is_identical(atom, entry->ignored[i])){
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
+static inline int
 match_record(ErlNifEnv* env, int arity, const ERL_NIF_TERM *tuple, State *st){
 
   EncRecord *records = enc_records_base(st->records);
@@ -278,12 +293,15 @@ match_record(ErlNifEnv* env, int arity, const ERL_NIF_TERM *tuple, State *st){
       unsigned bin_size = 0;
       b_putc('{', st);
       for(k = 0; k < records[i].arity; k++){
-	EncField field = fields[fds_offset + k];
-	bin_size += field.size;
+
+        if(!enc_should_be_ignored(env, tuple[k+1], st->records)){
+          EncField field = fields[fds_offset + k];
+          bin_size += field.size;
 	//FIXME {
-	b_puts(field.size, st->records->bin.data + field.offset, st);
-	if(!match_term(env, tuple[k+1], st))
-	  return 0;
+          b_puts(field.size, st->records->bin.data + field.offset, st);
+          if(!match_term(env, tuple[k+1], st))
+            return 0;
+        }
       }
       b_putc('}', st);
       return 1;

@@ -20,3 +20,11 @@ encrec1_test() ->
 encrec2_test() ->
     F = jsonx:encoder([ {rec, record_info(fields, rec)} ]),
     <<"{\"a\": \"x\",\"b\": {\"a\": {\"a\": \"x\",\"b\": \"y\"},\"b\": \"w\"}}">> = F({rec, x, {rec, {rec, x, y}, w}}).
+
+
+
+encrec3_test() ->
+    %%F = jsonx:encoder([ {spam, [a, b, c]} ], [{ignore,null}]),
+    F = jsonx:encoder([ {spam, [a, b, c]} ], [{ignore, [null, undefined]}]),
+    <<"{}">> = F({spam, null, null, null}),
+    <<"{\"a\": \"nall\"}">> = F({spam, nall, null, undefined}).

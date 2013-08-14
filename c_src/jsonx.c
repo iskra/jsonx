@@ -62,10 +62,12 @@ reload(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info){
 
 static int
 upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data, ERL_NIF_TERM load_info){
+  *priv_data = *old_priv_data;
   return 0;
 }
 static void
 unload(ErlNifEnv* env, void* priv_data){
+  enif_free(priv_data);
   return;
 }
 

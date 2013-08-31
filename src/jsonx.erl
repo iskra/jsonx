@@ -36,8 +36,6 @@
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
 
--include_lib("eunit/include/eunit.hrl").
-
 %% =================
 %% API Encoding JSON
 %% =================

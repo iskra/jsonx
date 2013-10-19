@@ -338,25 +338,3 @@ extend_str_to_jstr(unsigned char *data, unsigned len, unsigned ext){
   }
   return;
 };
-
-/*
- //UTF8
- 0x00000000 - 0x0000007F:
-     0xxxxxxx  
-     
- 0x00000080 - 0x000007FF: 
-     110xxxxx 10xxxxxx
-
- 0x00000800 - 0x0000FFFF:
-     1110xxxx 10xxxxxx 10xxxxxx
-
- 0x00010000 - 0x001FFFFF:
-     11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-
- //Conversion
- 1000_0000 80 128
- 1100_0000 C0 192
- 1110_0000 E0 224
- 1111_0000 F0 240
- 1111_1000 F8 248
-*/

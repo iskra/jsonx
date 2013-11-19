@@ -233,4 +233,4 @@ init() ->
 			 [error, big_num, invalid_string, invalid_json, trailing_data, undefined_record]]).
 
 not_loaded(Line) ->
-    exit({not_loaded, [{module, ?MODULE}, {line, Line}]}).
+    erlang:nif_error({not_loaded, [{module, ?MODULE}, {line, Line}]}).

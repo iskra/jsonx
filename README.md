@@ -191,6 +191,8 @@ Mapping (JSON -> Erlang)
     {"this": "json"} :-> [{<<"this">>: <<"json">>}]           %% optional proplist
     {"this": "json"} :-> {struct, [{<<"this">>: <<"json">>}]} %% optional struct
     JSONObject       :-> #rec{...}                            %% decoder must be predefined
+    -1.123e12        :-> {1, 1123, 9}                         %% optional {number_format, decimal}
+    1.123e-6         :-> {0, 1123, -9}                        %% optional {number_format, decimal}
 
 Mapping (Erlang -> JSON)
 -----------------------

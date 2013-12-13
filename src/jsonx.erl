@@ -10,6 +10,7 @@
 %%       <li>false  -> atom false</li>
 %%       <li>string -> binary</li>
 %%       <li>number -> number</li>
+%%       <li>number -> {Sign, Value, Scale}, if non-integer and number_format is decimal (Sign = 0 for positive, 1 for negative)</li>
 %%       <li>array  -> list</li>
 %%       <li>object -> {PropList}, optional struct or proplist.</li>
 %%       <li>object -> #record{...} - decoder must be predefined</li>
@@ -79,7 +80,7 @@ decode(JSON) ->
 %%@doc Decode JSON to Erlang term with options.
 -spec decode(JSON, OPTIONS) -> JSON_TERM when
       JSON      :: binary(),
-      OPTIONS   :: [{format, struct|eep18|proplist}],
+      OPTIONS   :: [{format, struct|eep18|proplist} | {number_format, float|decimal}],
       JSON_TERM :: any().
 decode(JSON, Options) ->
     {Object, Float} = parse_format(Options),
@@ -97,7 +98,7 @@ decoder(Records_desc) ->
 %%@doc Build a JSON decoder with output undefined objects.
 -spec decoder(RECORDS_DESC, OPTIONS) -> DECODER when
       RECORDS_DESC :: [{tag, [names]}],
-      OPTIONS      :: [{format, struct|eep18|proplist}],
+      OPTIONS   :: [{format, struct|eep18|proplist} | {number_format, float|decimal}],
       DECODER      :: function().
 decoder(Records_desc, Options) ->
     {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),

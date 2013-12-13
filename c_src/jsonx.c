@@ -50,6 +50,8 @@ load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info){
   if(!enif_make_existing_atom(env, "eep18",    &(pdata->am_eep18),    ERL_NIF_LATIN1)) return 1;
   if(!enif_make_existing_atom(env, "no_match", &(pdata->am_no_match), ERL_NIF_LATIN1)) return 1;
 
+  if(!enif_make_existing_atom(env, "decimal",    &(pdata->am_decimal),    ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "float",    &(pdata->am_float),    ERL_NIF_LATIN1)) return 1;
   *priv_data = (void*)pdata;
 
   return 0;
@@ -223,8 +225,8 @@ static ErlNifFunc
 nif_funcs[] = {
   {"encode1",     1, encode_nif},
   {"encode_res", 2, encode_nif}, // with resource
-  {"decode_opt", 2, decode_nif}, // with options
-  {"decode_res", 4, decode_nif}, // with options, resource and strict flag
+  {"decode_opt", 3, decode_nif}, // with options
+  {"decode_res", 5, decode_nif}, // with options, resource and strict flag
   {"make_encoder_resource", 7, make_encoder_resource_nif},
   {"make_decoder_resource", 6, make_decoder_resource_nif}
 };

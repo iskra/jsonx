@@ -24,6 +24,9 @@ typedef struct{
   ERL_NIF_TERM am_eep18;
   ERL_NIF_TERM am_no_match;
 
+  ERL_NIF_TERM am_decimal;
+  ERL_NIF_TERM am_float;
+
   ErlNifResourceType* encoder_RSTYPE;
   ErlNifResourceType* decoder_RSTYPE;
 }PrivData;

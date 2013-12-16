@@ -10,6 +10,7 @@
 %%       <li>false  -> atom false</li>
 %%       <li>string -> binary</li>
 %%       <li>number -> number</li>
+%%       <li>number -> {Sign, Value, Scale}, if non-integer and number_format is decimal (Sign = 0 for positive, 1 for negative)</li>
 %%       <li>array  -> list</li>
 %%       <li>object -> {PropList}, optional struct or proplist.</li>
 %%       <li>object -> #record{...} - decoder must be predefined</li>
@@ -74,18 +75,16 @@ encoder(Records_desc, Options) ->
       JSON      :: binary(),
       JSON_TERM :: any().
 decode(JSON) ->
-    decode_opt(JSON, eep18).
+    decode_opt(JSON, eep18, float).
 
 %%@doc Decode JSON to Erlang term with options.
 -spec decode(JSON, OPTIONS) -> JSON_TERM when
       JSON      :: binary(),
-      OPTIONS   :: [{format, struct|eep18|proplist}],
+      OPTIONS   :: [{format, struct|eep18|proplist} | {number_format, float|decimal}],
       JSON_TERM :: any().
 decode(JSON, Options) ->
-    case parse_format(Options) of
-	undefined -> decode_opt(JSON, eep18);
-	F         -> decode_opt(JSON, F)
-    end.
+    {Object, Float} = parse_format(Options),
+	decode_opt(JSON, Object, Float).
 
 %%@doc Build a JSON decoder.
 -spec decoder(RECORDS_DESC) -> DECODER when
@@ -94,21 +93,19 @@ decode(JSON, Options) ->
 decoder(Records_desc) ->
     {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
     Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
-     fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, Resource, true) end.
+     fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, decimal, Resource, true) end.
 	    
 %%@doc Build a JSON decoder with output undefined objects.
 -spec decoder(RECORDS_DESC, OPTIONS) -> DECODER when
       RECORDS_DESC :: [{tag, [names]}],
-      OPTIONS      :: [{format, struct|eep18|proplist}],
+      OPTIONS   :: [{format, struct|eep18|proplist} | {number_format, float|decimal}],
       DECODER      :: function().
 decoder(Records_desc, Options) ->
     {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
     Resource = make_decoder_resource(RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3),
     %%Format = parse_format(Options),
-    case parse_format(Options) of
-	undefined -> fun(JSON_TERM) -> decode_res(JSON_TERM, eep18, Resource, false) end;
-	Format    -> fun(JSON_TERM) -> decode_res(JSON_TERM, Format, Resource, false) end
-    end.
+    {Object, Float} = parse_format(Options),
+    fun(JSON_TERM) -> decode_res(JSON_TERM, Object, Float, Resource, false) end.
 
 %% ==========
 %% Call NIFs
@@ -120,10 +117,10 @@ encode1(_JSON_TERM) ->
 encode_res(_JSON_TERM, _RESOURCE) ->
     not_loaded(?LINE).
 
-decode_opt(_JSON, _FORMAT) ->
+decode_opt(_JSON, _FORMAT, _NUMBER_FORMAT) ->
     not_loaded(?LINE).
 
-decode_res(_JSON_TERM, _FORMAT, _RESOURCE, _STRICT_FLAG) ->
+decode_res(_JSON_TERM, _FORMAT, _NUMBER_FORMAT, _RESOURCE, _STRICT_FLAG) ->
     not_loaded(?LINE).
 
 make_encoder_resource(_Rcnt, _Fcnt, _Records, _Fields, _Binsz, _Bin, _Ignored) ->
@@ -136,16 +133,17 @@ make_decoder_resource(_RecCnt, _UKeyCnt, _KeyCnt, _UKeys, _Keys, _Records3) ->
 %% Private functions
 %% =================
 
-parse_format([]) ->
-    undefined;
-parse_format([{format, struct} | _]) ->
-    struct;
-parse_format([{format, proplist} | _]) ->
-    proplist;
-parse_format([{format, eep18} | _]) ->
-    eep18;
-parse_format([_H | T]) ->
-    parse_format(T).
+parse_format(X) ->
+    % options list reversed to satisfy obj_tests:dec2obj4_test
+    parse_format(lists:reverse(X), eep18, float).
+parse_format([], Object, Float) ->
+    {Object, Float};
+parse_format([{format, Format} | T], _, Float) when Format == struct orelse Format == proplist orelse Format == eep18 ->
+    parse_format(T, Format, Float);
+parse_format([{number_format, Format} | T], Object, _) when Format == float orelse Format == decimal ->
+    parse_format(T, Object, Format);
+parse_format([_ | T], Object, Float) ->
+    parse_format(T, Object, Float).
 
 %%%% Internal for decoder
 

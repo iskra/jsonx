@@ -23,3 +23,19 @@ decnum00_test() ->
     0.0 = jsonx:decode(<<"0.0">>).
 decnum1_test() ->
     -0.0012 = jsonx:decode(<<"-1.2e-3">>).
+
+%% Test decode numerics to decimal
+decnum_decimal_integer_test() ->
+    123 = jsonx:decode(<<"123">>, [{number_format, decimal}]).
+decnum_decimal_zero_test() ->
+    {0, 0, -1} = jsonx:decode(<<"0.0">>, [{number_format, decimal}]).
+decnum_decimal_frac_exp_test() ->
+    {1,12,5} = jsonx:decode(<<"-1.2e6">>, [{number_format, decimal}]).
+decnum_decimal_frac_neg_exp_test() ->
+    {1,12,-4} = jsonx:decode(<<"-1.2e-3">>, [{number_format, decimal}]).
+decnum_decimal_frac_neg_exp_case_test() ->
+    {1,12,-4} = jsonx:decode(<<"-1.2E-3">>, [{number_format, decimal}]).
+decnum_decimal_frac_test() ->
+    {0,12,-1} = jsonx:decode(<<"1.2">>, [{number_format, decimal}]).
+decnum_decimal_exp_test() ->
+    {0,1,2} = jsonx:decode(<<"1e2">>, [{number_format, decimal}]).

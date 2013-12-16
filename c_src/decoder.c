@@ -18,6 +18,7 @@ typedef struct{
   size_t        offset;
   ERL_NIF_TERM  input;
   ERL_NIF_TERM  format;  //struct, eep18, proplist
+  ERL_NIF_TERM  number_format;  //float, decimal
   ERL_NIF_TERM  error;
   ERL_NIF_TERM  *stack_top;
   ERL_NIF_TERM  *stack_down;
@@ -315,6 +316,71 @@ parse_string_as_existing_atom(State* st){
 }
 
 static inline ERL_NIF_TERM
+parse_decimal(State *st){
+  long long value;
+  long long scale;
+  long long sign;
+  char *endptr;
+
+  char *sub_start;
+  long long sub;
+  long long i;
+
+  value = strtoll((char *)st->cur, &endptr, 10);
+  if (value < 0) {
+    sign = 1;
+    value = -value;
+  } else
+    sign = 0;
+
+  if (*endptr == '.') {
+    sub_start = endptr + 1;
+    if(*sub_start == '+' || *sub_start == '-')
+      return (ERL_NIF_TERM)0;
+
+    sub = strtoll(sub_start, &endptr, 10);
+    if(sub_start == endptr){
+      return (ERL_NIF_TERM)0;
+    }else if(errno == ERANGE){
+      st->error = st->priv->am_erange;
+      return (ERL_NIF_TERM)0;
+    }
+
+    scale = sub_start - endptr;
+    for (i = scale; i < 0; i++)
+      value *= 10;
+    value += sub;
+
+    if(value < 0) {
+      st->error = st->priv->am_erange;
+      return (ERL_NIF_TERM)0;
+    }
+  } else {
+    scale = 0;
+  }
+
+  if ((*endptr | 0x20) == 'e') {
+    sub_start = endptr + 1;
+    sub = strtoll(sub_start, &endptr, 10);
+    if(sub_start == endptr){
+      return (ERL_NIF_TERM)0;
+    }else if(errno == ERANGE){
+      st->error = st->priv->am_erange;
+      return (ERL_NIF_TERM)0;
+    }
+    scale += sub;
+  }
+
+  st->cur = (unsigned char*)endptr;
+  return enif_make_tuple3(
+    st->env,
+    enif_make_int64(st->env, sign),
+    enif_make_int64(st->env, value),
+    enif_make_int64(st->env, scale)
+  );
+}
+
+static inline ERL_NIF_TERM
 parse_number(State *st){
   long long int_num;
   double float_num;
@@ -330,6 +396,9 @@ parse_number(State *st){
   }
 
   if(*endptr == '.' || *endptr == 'e' || *endptr == 'E'){
+    if(st->number_format == st->priv->am_decimal){
+      return parse_decimal(st);  
+    }
     float_num = strtod((char *)st->cur, &endptr);
     if(errno != ERANGE){
       st->cur = (unsigned char*)endptr;
@@ -403,15 +472,16 @@ decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]){
   if(!enif_inspect_binary(env, argv[0], &input)){
     return enif_make_badarg(env);
   }
-  assert(argc == 2 || argc == 4 );
+  assert(argc == 3 || argc == 5 );
   State st;
   st.priv = (PrivData*)enif_priv_data(env);
   st.resource = NULL;
   st.input = argv[0];
   st.format = argv[1];
-  if (argc == 4){ // whith resource
-    assert(enif_get_resource(env, argv[2], st.priv->decoder_RSTYPE, (void**)&st.resource));
-    st.strict_flag = enif_is_identical(st.priv->am_true, argv[3]) ? 1 : 0;
+  st.number_format = argv[2];
+  if (argc == 5){ // whith resource
+    assert(enif_get_resource(env, argv[3], st.priv->decoder_RSTYPE, (void**)&st.resource));
+    st.strict_flag = enif_is_identical(st.priv->am_true, argv[4]) ? 1 : 0;
   }
   st.offset = JS_OFFSET;
   st.buf_size = st.offset + input.size + 4;

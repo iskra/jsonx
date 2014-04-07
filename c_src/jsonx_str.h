@@ -103,7 +103,7 @@ ucs_to_utf8(unsigned char* ptr, unsigned ucs){
     *(ptr++) = (unsigned char) 0xC0 + (ucs >> 6);
     *(ptr++) = (unsigned char) 0x80 + (ucs & 0x3F);
     return ptr;
-  }else if(ucs < 0x1000) {
+  }else if(ucs < 0x10000) {
     // 1110xxxx 10xyyyyy 10yyyyyy
     if(ucs < 0xD800 || (ucs > 0xDFFF && ucs < 0xFFFE)) {
       *(ptr++) = (unsigned char) 0xE0 + (ucs >> 12);

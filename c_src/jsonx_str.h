@@ -209,7 +209,7 @@ check_with_unescape_jstr(unsigned char *str, unsigned char **endstr, unsigned ch
   if(is_surrogate_start(hval) && (sur_end = next_surrogate_end(src))){
     hval = parse_surrogate(hval, sur_end);
     src += 6;
-  } else {goto error;}
+  }
 	if(!(dst = ucs_to_utf8(dst, hval))) {goto error;}
 	src += 4;
 	continue;

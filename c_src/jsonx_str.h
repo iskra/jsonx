@@ -210,7 +210,6 @@ check_with_unescape_jstr(unsigned char *str, unsigned char **endstr, unsigned ch
     hval = parse_surrogate(hval, sur_end);
     src += 6;
   } else {goto error;}
-	src++;
 	if(!(dst = ucs_to_utf8(dst, hval))) {goto error;}
 	src += 4;
 	continue;

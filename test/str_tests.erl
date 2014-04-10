@@ -33,6 +33,8 @@ encutf4_test() ->
 encutf5_test() ->
      {no_match,<<248,128,128,128,128>>} = jsonx:encode(<<248, 128, 128, 128, 128>>).
 
+decutf_test() ->
+    <<237,129,172,235,166,176,236,138,164,237,139,177>> = jsonx:decode(<<"\"\\ud06c\\ub9b0\\uc2a4\\ud2f1\"">>).
 
 %% Test decode atoms
 dectrue_test() ->

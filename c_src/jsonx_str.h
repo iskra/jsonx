@@ -103,7 +103,7 @@ ucs_to_utf8(unsigned char* ptr, unsigned ucs){
     *(ptr++) = (unsigned char) 0xC0 + (ucs >> 6);
     *(ptr++) = (unsigned char) 0x80 + (ucs & 0x3F);
     return ptr;
-  }else if(ucs < 0x1000) {
+  }else if(ucs < 0x10000) {
     // 1110xxxx 10xyyyyy 10yyyyyy
     if(ucs < 0xD800 || (ucs > 0xDFFF && ucs < 0xFFFE)) {
       *(ptr++) = (unsigned char) 0xE0 + (ucs >> 12);
@@ -122,6 +122,35 @@ ucs_to_utf8(unsigned char* ptr, unsigned ucs){
     return ptr;
   }
   return NULL;
+}
+
+static inline int
+is_surrogate_start(int val){
+  return ((0xD800 <= val) && (val <= 0xDBFF));
+}
+
+static inline int
+next_surrogate_end(unsigned char *str){
+  unsigned char *src = str;
+  src+=4;
+  if(*src == '\\'){
+    unsigned hval;
+    src++;
+    if(*src == 'u'){
+      src++;
+      if(ucs_from_4hex(src, &hval)) {
+        if((0xDC00 <= hval) && (hval <= 0xDFFF)){
+          return hval;
+        }
+      }
+    }
+  }
+  return 0;
+}
+
+static inline int
+parse_surrogate(int start, int end){
+  return (((start - 0xD800) << 10) + (end - 0xDC00) + 0x0010000);
 }
 
 static inline  int
@@ -174,8 +203,13 @@ check_with_unescape_jstr(unsigned char *str, unsigned char **endstr, unsigned ch
       case '\\': {src++; *dst++ = 92U; continue;}
       case 'u': {
 	unsigned hval;
-	src++;
-	if(!ucs_from_4hex(src, &hval)) {goto error;}
+  src++;
+  if(!ucs_from_4hex(src, &hval)) {goto error;}
+  unsigned sur_end;
+  if(is_surrogate_start(hval) && (sur_end = next_surrogate_end(src))){
+    hval = parse_surrogate(hval, sur_end);
+    src += 6;
+  }
 	if(!(dst = ucs_to_utf8(dst, hval))) {goto error;}
 	src += 4;
 	continue;

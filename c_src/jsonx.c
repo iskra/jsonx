@@ -48,6 +48,7 @@ load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info){
   if(!enif_make_existing_atom(env, "struct",   &(pdata->am_struct),   ERL_NIF_LATIN1)) return 1;
   if(!enif_make_existing_atom(env, "proplist", &(pdata->am_proplist), ERL_NIF_LATIN1)) return 1;
   if(!enif_make_existing_atom(env, "eep18",    &(pdata->am_eep18),    ERL_NIF_LATIN1)) return 1;
+  if(!enif_make_existing_atom(env, "map",      &(pdata->am_map),      ERL_NIF_LATIN1)) return 1;
   if(!enif_make_existing_atom(env, "no_match", &(pdata->am_no_match), ERL_NIF_LATIN1)) return 1;
 
   *priv_data = (void*)pdata;

@@ -31,6 +31,11 @@ static inline int match_json(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
 static inline int match_tuple(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
 static inline int match_term(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
 
+#ifdef ERL_MAP_SUPPORT
+static inline int match_empty_map(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
+static inline int match_map(ErlNifEnv* env, ERL_NIF_TERM term, State *st);
+#endif
+
 static void
 do_reserve(size_t sz, State *st){
     size_t used = st->cur - st->bin.data;
@@ -178,6 +183,28 @@ match_empty_list(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   return 1;  
 }
 
+#ifdef ERL_MAP_SUPPORT
+static inline int
+match_empty_map(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
+  if(!enif_is_map(env, term)){
+    return 0;
+  }
+
+  size_t size;
+
+  if(!enif_get_map_size(env, term, &size)){
+  	  return 0;
+  }
+
+  if (size > 0){
+  	  return 0;
+  }
+
+  b_putc2('{', '}', st);
+  return 1;  
+}
+#endif
+
 static inline int
 match_string(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   if(match_binary(env, term, st)){
@@ -253,6 +280,41 @@ match_list(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
   return 1;
 }
 
+#ifdef ERL_MAP_SUPPORT
+static inline int
+match_map(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
+  ERL_NIF_TERM map, key, value;
+  ErlNifMapIterator iter;
+  //ErlNifMapIteratorEntry element;
+
+  if(!enif_is_map(env, term))
+    return 0;
+
+  b_putc('{',  st);
+  map = term;
+  if (!enif_map_iterator_create(env, map, &iter, ERL_NIF_MAP_ITERATOR_HEAD))
+  	  return 0;
+
+  do {
+  	  if (!enif_map_iterator_get_pair(env, &iter, &key, &value)) {
+  	  	  return 0;
+	  }
+  	  if(match_string(env, key, st)){
+  	  	  b_putc(':', st);
+  	  	  if(match_term(env, value, st)){
+  	  	  	  b_putc(',', st);
+  	  	  	  continue;
+  	  	  }
+	  }
+	  return 0;
+
+  } while (enif_map_iterator_next(env, &iter) && !enif_map_iterator_is_tail(env, &iter));
+  b_unputc(st); // delete tailing ',';
+  b_putc('}', st);
+  enif_map_iterator_destroy(env, &iter);
+  return 1;
+}
+#endif
 
 static inline int
 match_json(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
@@ -352,7 +414,15 @@ match_tuple(ErlNifEnv* env, ERL_NIF_TERM term, State *st){
       return 1;
     }else if(match_list(env, term, st)){
       return 1;
-    }else if(match_proplist(env, term, st)){
+	}
+#ifdef ERL_MAP_SUPPORT
+	else if(match_empty_map(env, term, st)){
+	  return 1;
+	}else if(match_map(env, term, st)){
+	  return 1;
+    }
+#endif
+    else if(match_proplist(env, term, st)){
       return 1;
     }else if(match_tuple(env, term, st)){
       return 1;

@@ -6,6 +6,10 @@
 #define inline __inline
 #endif
 
+#if ERL_NIF_MAJOR_VERSION >= 2 && ERL_NIF_MINOR_VERSION >= 7
+#define ERL_MAP_SUPPORT
+#endif
+
 typedef struct{
   ERL_NIF_TERM am_true;
   ERL_NIF_TERM am_false;
@@ -22,6 +26,7 @@ typedef struct{
   ERL_NIF_TERM am_struct;
   ERL_NIF_TERM am_proplist;
   ERL_NIF_TERM am_eep18;
+  ERL_NIF_TERM am_map;
   ERL_NIF_TERM am_no_match;
 
   ErlNifResourceType* encoder_RSTYPE;

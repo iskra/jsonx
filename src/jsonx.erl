@@ -22,6 +22,7 @@
 %%       <li>any other atom     -> string</li>
 %%       <li>binary             -> string</li>
 %%       <li>number             -> number</li>
+%%       <li>map                -> object</li>
 %%       <li>{struct, PropList} -> object</li>
 %%       <li>{PropList}         -> object</li>
 %%       <li>PropList           -> object</li>
@@ -79,7 +80,7 @@ decode(JSON) ->
 %%@doc Decode JSON to Erlang term with options.
 -spec decode(JSON, OPTIONS) -> JSON_TERM when
       JSON      :: binary(),
-      OPTIONS   :: [{format, struct|eep18|proplist}],
+      OPTIONS   :: [{format, struct|eep18|map|proplist}],
       JSON_TERM :: any().
 decode(JSON, Options) ->
     case parse_format(Options) of
@@ -99,7 +100,7 @@ decoder(Records_desc) ->
 %%@doc Build a JSON decoder with output undefined objects.
 -spec decoder(RECORDS_DESC, OPTIONS) -> DECODER when
       RECORDS_DESC :: [{tag, [names]}],
-      OPTIONS      :: [{format, struct|eep18|proplist}],
+      OPTIONS      :: [{format, struct|eep18|map|proplist}],
       DECODER      :: function().
 decoder(Records_desc, Options) ->
     {RecCnt, UKeyCnt, KeyCnt, UKeys, Keys, Records3} = prepare_for_dec(Records_desc),
@@ -144,8 +145,17 @@ parse_format([{format, proplist} | _]) ->
     proplist;
 parse_format([{format, eep18} | _]) ->
     eep18;
+parse_format([{format, map} | _]) ->
+	maybe_map();
 parse_format([_H | T]) ->
     parse_format(T).
+
+
+-ifndef(JSONX_NO_MAPS).
+maybe_map() -> map.
+-else.
+maybe_map() -> undefined.
+-endif.
 
 %%%% Internal for decoder
 
@@ -229,7 +239,7 @@ init() ->
         Dir ->
             filename:join(Dir, ?LIBNAME)
     end,
-	ok = erlang:load_nif(So, [[json, struct, proplist, eep18, no_match], [true, false, null],
+	ok = erlang:load_nif(So, [[json, struct, proplist, eep18, map, no_match], [true, false, null],
 			 [error, big_num, invalid_string, invalid_json, trailing_data, undefined_record]]).
 
 not_loaded(Line) ->

@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <assert.h>
+#include <stdio.h>
 #include "jsonx.h"
 #include "jsonx_str.h"
 
@@ -17,7 +18,7 @@ typedef struct{
   unsigned char *cur;
   size_t        offset;
   ERL_NIF_TERM  input;
-  ERL_NIF_TERM  format;  //struct, eep18, proplist
+  ERL_NIF_TERM  format;  //struct, eep18, proplist, map
   ERL_NIF_TERM  error;
   ERL_NIF_TERM  *stack_top;
   ERL_NIF_TERM  *stack_down;
@@ -35,6 +36,10 @@ static inline ERL_NIF_TERM parse_number(State* st);
 static inline ERL_NIF_TERM parse_true(State* st);
 static inline ERL_NIF_TERM parse_false(State* st);
 static inline ERL_NIF_TERM parse_null(State* st);
+
+#ifdef ERL_MAP_SUPPORT
+static inline ERL_NIF_TERM parse_object_to_map(State* st);
+#endif
 
 static inline void
 grow_stack(State *st){
@@ -162,6 +167,65 @@ parse_object(State* st){
   }
   assert(0);
 }
+
+#ifdef ERL_MAP_SUPPORT
+static inline ERL_NIF_TERM
+parse_object_to_map(State* st){
+  ERL_NIF_TERM *plist, *plist2;
+  ERL_NIF_TERM p, key, val, pair;
+  unsigned char c;
+
+  st->cur++;
+  if(look_ah(st) == '}'){
+    st->cur++;
+    p = enif_make_new_map(st->env);
+    plist = &p;
+    goto ret;
+  }
+  size_t stack_off =  st->stack_top - st->stack_down;
+  for(;;){
+    if(look_ah(st) == '"'){
+      if((key = parse_string(st))){
+	if(look_ah(st) == ':'){
+	  st->cur++;
+	  if((val = parse_json(st))){
+	    pair = enif_make_tuple2(st->env, key, val);
+	    push_term(st, pair);
+	    c = look_ah(st);
+	    st->cur++;
+	    if(c == ','){
+	      continue;
+	    }else if(c == '}'){
+	      ERL_NIF_TERM *down =  st->stack_down + stack_off;
+	      const ERL_NIF_TERM *tuple;
+	      int arity = 2;
+	      int count = 0;
+	      p = enif_make_new_map(st->env);
+	      plist = &p;
+	      plist2 = malloc(sizeof(ERL_NIF_TERM));
+	      for (count=0; count < (st->stack_top - down); count++) {
+	      	  enif_get_tuple(st->env, down[count], &arity, &tuple);
+	      	  enif_make_map_put(st->env, *plist, tuple[0], tuple[1], plist2);
+	      	  plist = plist2;
+	      	  plist2 = &p;
+		  }
+	      st->stack_top = down;
+	      goto ret;
+	    }
+	  }
+	}
+      }
+    }
+    if(!st->error){
+      st->error = st->priv->am_esyntax;
+    }
+    return (ERL_NIF_TERM)0;
+  }
+ ret:
+    return enif_make_tuple2(st->env, st->priv->am_map, *plist);
+  assert(0);
+}
+#endif
 
 static inline ERL_NIF_TERM
 parse_object_to_record(State* st){
@@ -381,7 +445,18 @@ parse_json(State *st){
   ERL_NIF_TERM num;
   switch(look_ah(st)){
   case '\"' : return parse_string(st);
-  case '{'  : return (st->resource ? parse_object_to_record(st) : parse_object(st));
+  case '{'  : 
+  			  if (st->resource) {
+  			  	  return parse_object_to_record(st);
+			  }
+#ifdef ERL_MAP_SUPPORT
+			  else if (st->format == st->priv->am_map) {
+			  	  return parse_object_to_map(st);
+			  }
+#endif
+			  else {
+			  	  return parse_object(st);
+			  };
   case '['  : return parse_array(st);
   case 't'  : return parse_true(st);
   case 'f'  : return parse_false(st);

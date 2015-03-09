@@ -22,6 +22,7 @@ typedef struct{
   ERL_NIF_TERM am_struct;
   ERL_NIF_TERM am_proplist;
   ERL_NIF_TERM am_eep18;
+  ERL_NIF_TERM am_map;
   ERL_NIF_TERM am_no_match;
 
   ErlNifResourceType* encoder_RSTYPE;

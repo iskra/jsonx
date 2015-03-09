@@ -2,6 +2,8 @@
 JSONX is an Erlang library for efficient JSON decoding and encoding, implemented in Erlang NIFs.
 Works with binaries as strings, arrays as lists and only knows how to decode UTF-8 (and ASCII).
 
+Map encoding/decoding supported in Erlang/OTP 17+
+
 JSONX IS VERY FAST!
 ------------------
 
@@ -114,6 +116,10 @@ Examples encoding JSON
 %% Object as eep18 propsal
 4>  jsonx:encode( {[{name, <<"Ivan">>}, {age, 33}, {phones, [3332211, 4443322]}]} ).
 <<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>
+
+%% Object as Map
+5>  jsonx:encode( #{name => <<"Ivan">>, age => 33, phones => [3332211, 4443322]} ).
+<<"{\"age\":33,\"name\":\"Ivan\",\"phones\":[3332211,4443322]}">>
 ```
 
 Examples decoding JSON
@@ -139,6 +145,11 @@ Examples decoding JSON
 {struct,[{<<"name">>,<<"Ivan">>},
          {<<"age">>,33},
          {<<"phones">>,[3332211,4443322]}]}
+
+5> jsonx:decode(<<"{\"name\":\"Ivan\",\"age\":33,\"phones\":[3332211,4443322]}">>, [{format, map}]).
+{map,#{<<"age">> => 33,
+       <<"name">> => <<"Ivan">>,
+       <<"phones">> => [3332211,4443322]}}
 ```
 
 Example streaming parse
@@ -190,6 +201,7 @@ Mapping (JSON -> Erlang)
     {"this": "json"} :-> {[{<<"this">>: <<"json">>}]}         %% default eep18
     {"this": "json"} :-> [{<<"this">>: <<"json">>}]           %% optional proplist
     {"this": "json"} :-> {struct, [{<<"this">>: <<"json">>}]} %% optional struct
+    {"this": "json"} :-> {map, #{<<"this">> => <<"json">>}}   %% optional map
     JSONObject       :-> #rec{...}                            %% decoder must be predefined
 
 Mapping (Erlang -> JSON)
@@ -202,6 +214,7 @@ Mapping (Erlang -> JSON)
     <<"str">>                            :-> "str"
     [1, 2.99]                            :-> [1, 2.99]
     {struct, [{<<"this">>: <<"json">>}]} :-> {"this": "json"}
+    {map, #{this => <<"json">>}}         :-> {"this": "json"}
     [{<<"this">>: <<"json">>}]           :-> {"this": "json"}
     {[{<<"this">>: <<"json">>}]}         :-> {"this": "json"}
     {json, IOList}                       :-> `iolist_to_binary(IOList)`  %% include with no validation

@@ -30,13 +30,16 @@ static inline ERL_NIF_TERM parse_json(State* st);
 static inline ERL_NIF_TERM parse_array(State* st);
 static inline ERL_NIF_TERM parse_object(State* st);
 static inline ERL_NIF_TERM parse_object_to_record(State* st);
-static inline ERL_NIF_TERM parse_object_to_map(State* st);
 static inline ERL_NIF_TERM parse_string(State* st);
 static inline ERL_NIF_TERM parse_string_as_existing_atom(State* st);
 static inline ERL_NIF_TERM parse_number(State* st);
 static inline ERL_NIF_TERM parse_true(State* st);
 static inline ERL_NIF_TERM parse_false(State* st);
 static inline ERL_NIF_TERM parse_null(State* st);
+
+#ifdef ERL_MAP_SUPPORT
+static inline ERL_NIF_TERM parse_object_to_map(State* st);
+#endif
 
 static inline void
 grow_stack(State *st){
@@ -165,6 +168,7 @@ parse_object(State* st){
   assert(0);
 }
 
+#ifdef ERL_MAP_SUPPORT
 static inline ERL_NIF_TERM
 parse_object_to_map(State* st){
   ERL_NIF_TERM *plist, *plist2;
@@ -221,7 +225,7 @@ parse_object_to_map(State* st){
     return enif_make_tuple2(st->env, st->priv->am_map, *plist);
   assert(0);
 }
-
+#endif
 
 static inline ERL_NIF_TERM
 parse_object_to_record(State* st){
@@ -444,9 +448,13 @@ parse_json(State *st){
   case '{'  : 
   			  if (st->resource) {
   			  	  return parse_object_to_record(st);
-			  }else if (st->format == st->priv->am_map) {
+			  }
+#ifdef ERL_MAP_SUPPORT
+			  else if (st->format == st->priv->am_map) {
 			  	  return parse_object_to_map(st);
-			  }else {
+			  }
+#endif
+			  else {
 			  	  return parse_object(st);
 			  };
   case '['  : return parse_array(st);

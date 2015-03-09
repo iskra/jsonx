@@ -146,9 +146,16 @@ parse_format([{format, proplist} | _]) ->
 parse_format([{format, eep18} | _]) ->
     eep18;
 parse_format([{format, map} | _]) ->
-	map;
+	maybe_map();
 parse_format([_H | T]) ->
     parse_format(T).
+
+
+-ifndef(JSONX_NO_MAPS).
+maybe_map() -> map.
+-else.
+maybe_map() -> undefined.
+-endif.
 
 %%%% Internal for decoder
 

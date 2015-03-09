@@ -6,6 +6,10 @@
 #define inline __inline
 #endif
 
+#if ERL_NIF_MAJOR_VERSION >= 2 && ERL_NIF_MINOR_VERSION >= 7
+#define ERL_MAP_SUPPORT
+#endif
+
 typedef struct{
   ERL_NIF_TERM am_true;
   ERL_NIF_TERM am_false;

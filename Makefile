@@ -1,4 +1,6 @@
 REBAR = rebar
+NAME=jsonx
+PLT_NAME=$(NAME).plt
 
 .PHONY: all xref erl test clean doc
 
@@ -23,3 +25,11 @@ clean:
 
 doc:
 	$(REBAR) doc
+
+
+$(PLT_NAME): 
+	dialyzer --build_plt --apps erts kernel stdlib crypto mnesia sasl common_test eunit --output_plt $(PLT_NAME)
+
+dialyze: erl $(PLT_NAME)
+	dialyzer --check_plt --plt $(PLT_NAME) -c .
+	dialyzer -c ebin

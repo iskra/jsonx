@@ -36,6 +36,13 @@
 -define(LIBNAME, jsonx).
 -define(APPNAME, jsonx).
 
+-type parsed_json() ::  j_atom() | j_array() | j_obj().
+-type j_atom() :: null | boolean() | number() | binary().
+-type j_array() :: [parsed_json()].
+-type j_obj() :: {[{binary(), parsed_json()}]}.
+
+-export_type([parsed_json/0, j_atom/0, j_array/0, j_obj/0]).              
+
 %% =================
 %% API Encoding JSON
 %% =================
@@ -72,7 +79,7 @@ encoder(Records_desc, Options) ->
 %%@doc Decode JSON to Erlang term.
 -spec decode(JSON) -> JSON_TERM when
       JSON      :: binary(),
-      JSON_TERM :: any().
+      JSON_TERM :: parsed_json().
 decode(JSON) ->
     decode_opt(JSON, eep18).
 

@@ -1,3 +1,4 @@
+%% -*- coding: utf-8 -*-
 -module(bench_encode_records).
 -export([test/0]).
 -record(person, {name, last_name, age, adress, phones, email}).
